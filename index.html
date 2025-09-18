@@ -54,6 +54,11 @@
       text-decoration: none;
       color: #0070f3;
     }
+    .contact {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #555;
+    }
   </style>
 </head>
 <body>
@@ -88,7 +93,7 @@
         const workbook = XLSX.read(data, {type: 'array'});
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, {header:1});
-          allData = [];
+        allData = [];
         qrList = [];
         document.getElementById('qrs').innerHTML = "";
 
@@ -126,9 +131,13 @@
         const div = document.createElement('div');
         div.className = "qr-item";
         div.innerHTML = `
-          <p><b>${item.AccountName || ''}</b><br>${item.AccountNumber} (${item.Bank || ''})<br>Số tiền: ${item.Amount || ''}<br>${item.Remark || ''}</p>
+          <p><b>${item.AccountName || ''}</b><br>
+          ${item.AccountNumber} (${item.Bank || ''})<br>
+          Số tiền: ${item.Amount || ''}<br>
+          ${item.Remark || ''}</p>
           <img src="${item.url}" alt="QR" />
           <a href="${item.url}" download="${item.filename}">⬇ Lưu ảnh</a>
+          <p class="contact">Liên hệ: Mr. A 0987246777</p>
         `;
         container.appendChild(div);
       });
