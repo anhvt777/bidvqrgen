@@ -1,25 +1,24 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<title>Excel → VietQR</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-<style>
-body { font-family: Arial, sans-serif; margin: 0; background: #f5f6fa; }
-header {
-background: #0070f3;
-color: white;
-padding: 20px;
-text-align: center;
-box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-}
-header h1 { margin: 0; font-size: 24px; }
-main { padding: 20px; }
-    #controls { margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
+  <meta charset="UTF-8">
+  <title>Excel → VietQR</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f5f6fa; }
+    header {
+      background: #0070f3;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    header h1 { margin: 0; font-size: 24px; }
+    main { padding: 20px; }
     #controls { margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-#upload { padding: 6px; }
+    #upload { padding: 6px; }
     #search {
       flex: 1;
       padding: 6px 10px;
@@ -27,78 +26,94 @@ main { padding: 20px; }
       border: 1px solid #ccc;
       font-size: 14px;
     }
-#downloadAll {
-background: #28a745;
-border: none;
-@@ -52,12 +59,13 @@
+    #downloadAll {
+      background: #28a745;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #downloadAll:hover { background: #218838; }
+    #qrs { display: flex; flex-wrap: wrap; gap: 20px; }
+    .qr-item {
+      border: 1px solid #ccc;
+      background: white;
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+      width: 200px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .qr-item img { display: block; margin: auto; max-width: 150px; }
+    .qr-item a {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 13px;
+      text-decoration: none;
+      color: #0070f3;
+    }
+  </style>
+</head>
 <body>
-<header>
-<h1>Chuyển Excel → Mã QR VietQR</h1>
-    <p>Tải file Excel để sinh QR thanh toán, sau đó lưu về máy tính</p>
+  <header>
+    <h1>Chuyển Excel → Mã QR VietQR</h1>
     <p>Tải file Excel để sinh QR thanh toán, tìm kiếm và lưu về máy tính</p>
-</header>
+  </header>
 
-<main>
-<div id="controls">
-<input type="file" id="upload" accept=".xlsx,.xls" />
+  <main>
+    <div id="controls">
+      <input type="file" id="upload" accept=".xlsx,.xls" />
       <input type="text" id="search" placeholder="🔍 Tìm theo AccountName / AccountNumber / Amount / Remark..." />
-<button id="downloadAll" style="display:none;">⬇ Tải tất cả QR (ZIP)</button>
-</div>
+      <button id="downloadAll" style="display:none;">⬇ Tải tất cả QR (ZIP)</button>
+    </div>
 
-@@ -66,9 +74,11 @@
+    <div id="qrs"></div>
+  </main>
 
-<script>
-let qrList = [];
+  <script>
+    let qrList = [];
     let allData = []; // lưu toàn bộ QR để tìm kiếm
 
-document.getElementById('upload').addEventListener('change', handleFile, false);
-document.getElementById('downloadAll').addEventListener('click', downloadAll, false);
+    document.getElementById('upload').addEventListener('change', handleFile, false);
+    document.getElementById('downloadAll').addEventListener('click', downloadAll, false);
     document.getElementById('search').addEventListener('input', filterQR, false);
 
-function handleFile(e) {
-const file = e.target.files[0];
-@@ -79,34 +89,67 @@
-const sheet = workbook.Sheets[workbook.SheetNames[0]];
-const rows = XLSX.utils.sheet_to_json(sheet, {header:1});
-
+    function handleFile(e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, {header:1});
+          allData = [];
+        qrList = [];
         document.getElementById('qrs').innerHTML = "";
-        allData = [];
-qrList = [];
-        document.getElementById('qrs').innerHTML = "";
 
-for (let i = 1; i < rows.length; i++) {
-const [AccountNumber, Bank, BankBin, Amount, AccountName, Remark] = rows[i];
-if (!AccountNumber || !BankBin) continue;
+        for (let i = 1; i < rows.length; i++) {
+          const [AccountNumber, Bank, BankBin, Amount, AccountName, Remark] = rows[i];
+          if (!AccountNumber || !BankBin) continue;
 
-const qrUrl = `https://img.vietqr.io/image/${BankBin}-${AccountNumber}-compact2.png?amount=${Amount || ''}&addInfo=${encodeURIComponent(Remark || '')}&accountName=${encodeURIComponent(AccountName || '')}`;
+          const qrUrl = `https://img.vietqr.io/image/${BankBin}-${AccountNumber}-compact2.png?amount=${Amount || ''}&addInfo=${encodeURIComponent(Remark || '')}&accountName=${encodeURIComponent(AccountName || '')}`;
 
-          qrList.push({url: qrUrl, filename: `qr_${AccountNumber}.png`});
-
-          const div = document.createElement('div');
-          div.className = "qr-item";
-          div.innerHTML = `
-            <p><b>${AccountName || ''}</b><br>${AccountNumber} (${Bank || ''})<br>Số tiền: ${Amount || ''}</p>
-            <img src="${qrUrl}" alt="QR" />
-            <a href="${qrUrl}" download="qr_${AccountNumber}.png">⬇ Lưu ảnh</a>
-          `;
-          document.getElementById('qrs').appendChild(div);
           const item = {
             url: qrUrl,
             filename: `qr_${AccountNumber}.png`,
             AccountNumber, Bank, Amount, AccountName, Remark
           };
           allData.push(item);
-}
+        }
 
-        if (qrList.length > 0) {
         renderQR(allData);
 
         if (allData.length > 0) {
-document.getElementById('downloadAll').style.display = "inline-block";
-}
-};
-reader.readAsArrayBuffer(file);
-}
+          document.getElementById('downloadAll').style.display = "inline-block";
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
 
     function renderQR(list) {
       const container = document.getElementById('qrs');
@@ -134,6 +149,16 @@ reader.readAsArrayBuffer(file);
       renderQR(filtered);
     }
 
-async function downloadAll() {
-const zip = new JSZip();
-for (const qr of qrList) {
+    async function downloadAll() {
+      const zip = new JSZip();
+      for (const qr of qrList) {
+        const response = await fetch(qr.url);
+        const blob = await response.blob();
+        zip.file(qr.filename, blob);
+      }
+      const content = await zip.generateAsync({type:"blob"});
+      saveAs(content, "all_qr_codes.zip");
+    }
+  </script>
+</body>
+</html>
