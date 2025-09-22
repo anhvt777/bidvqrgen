@@ -2,51 +2,85 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Excel → VietQR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PGD ĐƯỜNG 9 - BIDV QUẢNG TRỊ tạo QR theo lô</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #f5f6fa; }
     header {
-      background: #0070f3;
+      background: #006B68; /* màu xanh ngọc bích BIDV */
       color: white;
       padding: 20px;
       text-align: center;
       box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
-    header h1 { margin: 0; font-size: 24px; }
+    header h1 { margin: 0; font-size: 22px; }
+    header p { margin: 5px 0; font-size: 14px; }
+
+    /* chữ chạy quảng cáo */
+    .marquee {
+      overflow: hidden;
+      position: relative;
+      height: 25px;
+      margin-top: 8px;
+    }
+    .marquee span {
+      display: inline-block;
+      white-space: nowrap;
+      position: absolute;
+      will-change: transform;
+      animation: marquee 30s linear infinite;
+      font-size: 14px;
+      font-weight: bold;
+      color: #FFC62F;
+    }
+    @keyframes marquee {
+      0%   { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+
     main { padding: 20px; }
-    #controls { margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+    #controls { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+    #upload, #search, #downloadAll {
+      flex: 1;
+      min-width: 200px;
+    }
     #upload { padding: 6px; }
     #search {
-      flex: 1;
       padding: 6px 10px;
       border-radius: 4px;
       border: 1px solid #ccc;
       font-size: 14px;
     }
     #downloadAll {
-      background: #28a745;
+      background: #FFC62F;
       border: none;
-      color: white;
+      color: #006B68;
       padding: 8px 16px;
       border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
+      font-weight: bold;
     }
-    #downloadAll:hover { background: #218838; }
-    #qrs { display: flex; flex-wrap: wrap; gap: 20px; }
+    #downloadAll:hover { background: #e6b22b; }
+    
+    /* QR grid responsive */
+    #qrs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
     .qr-item {
       border: 1px solid #ccc;
       background: white;
       border-radius: 6px;
       padding: 10px;
       text-align: center;
-      width: 200px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    .qr-item img { display: block; margin: auto; max-width: 150px; }
+    .qr-item img { display: block; margin: auto; max-width: 150px; width: 100%; height: auto; }
     .qr-item a {
       display: inline-block;
       margin-top: 8px;
@@ -54,17 +88,21 @@
       text-decoration: none;
       color: #0070f3;
     }
-    .contact {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #555;
+
+    /* Mobile chỉnh font nhỏ hơn */
+    @media (max-width: 600px) {
+      header h1 { font-size: 18px; }
+      header p, .marquee span { font-size: 12px; }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>Chuyển Excel → Mã QR VietQR</h1>
-    <p>Tải file Excel để sinh QR thanh toán, tìm kiếm và lưu về máy tính</p>
+    <h1>PGD ĐƯỜNG 9 - BIDV QUẢNG TRỊ - Tool Excel → QR Code Thu hộ</h1>
+    <p>Tải file Excel để sinh QR thanh toán, tìm kiếm và scan QR để thanh toán</p>
+    <div class="marquee">
+      <span>🎉 Ưu đãi đặc biệt: TẶNG LOA THÔNG BÁO CHO HỘ KINH DOANH, TẶNG TIỀN lên đến 600.000 VNĐ vào TK, Lãi suất vay ưu đãi chỉ từ 4,5%/năm | Liên hệ Mr. Mạnh Hùng (0914 179 989) để biết thêm chi tiết 🎉</span>
+    </div>
   </header>
 
   <main>
@@ -79,7 +117,7 @@
 
   <script>
     let qrList = [];
-    let allData = []; // lưu toàn bộ QR để tìm kiếm
+    let allData = [];
 
     document.getElementById('upload').addEventListener('change', handleFile, false);
     document.getElementById('downloadAll').addEventListener('click', downloadAll, false);
@@ -131,13 +169,9 @@
         const div = document.createElement('div');
         div.className = "qr-item";
         div.innerHTML = `
-          <p><b>${item.AccountName || ''}</b><br>
-          ${item.AccountNumber} (${item.Bank || ''})<br>
-          Số tiền: ${item.Amount || ''}<br>
-          ${item.Remark || ''}</p>
+          <p><b>${item.AccountName || ''}</b><br>${item.AccountNumber} (${item.Bank || ''})<br>Số tiền: ${item.Amount || ''}<br>${item.Remark || ''}</p>
           <img src="${item.url}" alt="QR" />
           <a href="${item.url}" download="${item.filename}">⬇ Lưu ảnh</a>
-          <p class="contact">Liên hệ: Mr. A 0987246777</p>
         `;
         container.appendChild(div);
       });
@@ -160,13 +194,52 @@
 
     async function downloadAll() {
       const zip = new JSZip();
+
       for (const qr of qrList) {
-        const response = await fetch(qr.url);
-        const blob = await response.blob();
-        zip.file(qr.filename, blob);
+        try {
+          const response = await fetch(qr.url, {mode: "cors"});
+          const blob = await response.blob();
+
+          if (blob.type.startsWith("image/")) {
+            zip.file(qr.filename, blob);
+          } else {
+            const img = await loadImage(qr.url);
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            const dataUrl = canvas.toDataURL("image/png");
+            const dataBlob = dataURLToBlob(dataUrl);
+            zip.file(qr.filename, dataBlob);
+          }
+        } catch (err) {
+          console.error("Lỗi tải ảnh:", qr.url, err);
+        }
       }
-      const content = await zip.generateAsync({type:"blob"});
+
+      const content = await zip.generateAsync({type: "blob"});
       saveAs(content, "all_qr_codes.zip");
+    }
+
+    function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    function dataURLToBlob(dataUrl) {
+      const parts = dataUrl.split(",");
+      const mime = parts[0].match(/:(.*?);/)[1];
+      const bstr = atob(parts[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
+      return new Blob([u8arr], { type: mime });
     }
   </script>
 </body>
