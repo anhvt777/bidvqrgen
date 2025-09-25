@@ -19,7 +19,6 @@
     header h1 { margin: 0; font-size: 22px; }
     header p { margin: 5px 0; font-size: 14px; }
 
-    /* chữ chạy quảng cáo */
     .marquee {
       overflow: hidden;
       position: relative;
@@ -66,7 +65,6 @@
     }
     #downloadAll:hover { background: #e6b22b; }
     
-    /* QR grid responsive */
     #qrs {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -89,7 +87,6 @@
       color: #0070f3;
     }
 
-    /* Mobile chỉnh font nhỏ hơn */
     @media (max-width: 600px) {
       header h1 { font-size: 18px; }
       header p, .marquee span { font-size: 12px; }
@@ -136,15 +133,22 @@
         document.getElementById('qrs').innerHTML = "";
 
         for (let i = 1; i < rows.length; i++) {
-          const [AccountNumber, Bank, BankBin, Amount, AccountName, Remark] = rows[i];
+          const [AccountNumber, Bank, BankBin, Amount, AccountName, Remark, Class, StudentID] = rows[i];
           if (!AccountNumber || !BankBin) continue;
 
           const qrUrl = `https://img.vietqr.io/image/${BankBin}-${AccountNumber}-compact2.png?amount=${Amount || ''}&addInfo=${encodeURIComponent(Remark || '')}&accountName=${encodeURIComponent(AccountName || '')}`;
 
+          let filename = "";
+          if (Class && StudentID) {
+            filename = `${Class}_${StudentID}.png`;
+          } else {
+            filename = `qr_${AccountNumber}.png`;
+          }
+
           const item = {
             url: qrUrl,
-            filename: `qr_${AccountNumber}.png`,
-            AccountNumber, Bank, Amount, AccountName, Remark
+            filename,
+            AccountNumber, Bank, Amount, AccountName, Remark, Class, StudentID
           };
           allData.push(item);
         }
@@ -169,9 +173,13 @@
         const div = document.createElement('div');
         div.className = "qr-item";
         div.innerHTML = `
-          <p><b>${item.AccountName || ''}</b><br>${item.AccountNumber} (${item.Bank || ''})<br>Số tiền: ${item.Amount || ''}<br>${item.Remark || ''}</p>
+          <p><b>${item.AccountName || ''}</b><br>
+          ${item.AccountNumber} (${item.Bank || ''})<br>
+          Số tiền: ${item.Amount || ''}<br>
+          ${item.Remark || ''}<br>
+          ${item.Class || ''} - ${item.StudentID || ''}</p>
           <img src="${item.url}" alt="QR" />
-          <a href="${item.url}" download="${item.filename}">⬇ Lưu ảnh</a>
+          <a href="${item.url}" download="${item.filename}">⬇ Lưu ảnh (${item.filename})</a>
         `;
         container.appendChild(div);
       });
@@ -194,12 +202,10 @@
 
     async function downloadAll() {
       const zip = new JSZip();
-
       for (const qr of qrList) {
         try {
           const response = await fetch(qr.url, {mode: "cors"});
           const blob = await response.blob();
-
           if (blob.type.startsWith("image/")) {
             zip.file(qr.filename, blob);
           } else {
@@ -217,7 +223,6 @@
           console.error("Lỗi tải ảnh:", qr.url, err);
         }
       }
-
       const content = await zip.generateAsync({type: "blob"});
       saveAs(content, "all_qr_codes.zip");
     }
