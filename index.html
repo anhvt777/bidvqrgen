@@ -192,9 +192,17 @@
       return [name, classLabel].filter(Boolean).join(' ');
     }
 
-    // VietQR trả về ảnh có thể đã chuẩn hóa tên và làm mất số của mã lớp.
-    // Vẽ lại riêng dòng tên trên ảnh, giữ nguyên QR và các thông tin thanh toán.
-    function composeQrImage(sourceImage, displayName) {
+    // Thay toàn bộ phần thông tin VietQR bên dưới logo bằng nhãn trường cần in.
+    // QR và payload thanh toán giữ nguyên; chỉ phần trình bày ở chân ảnh được vẽ lại.
+    function formatAmountVnd(value) {
+      if (value === null || value === undefined || value === '') return '';
+      const digits = String(value).replace(/[^0-9-]/g, '');
+      const amount = Number(digits);
+      if (!Number.isFinite(amount)) return String(value).trim();
+      return Math.round(amount).toLocaleString('vi-VN') + ' VND';
+    }
+
+    function composeQrImage(sourceImage, displayName, amount) {
       const width = sourceImage.naturalWidth || sourceImage.width;
       const height = sourceImage.naturalHeight || sourceImage.height;
       const canvas = document.createElement('canvas');
@@ -203,25 +211,41 @@
       const ctx = canvas.getContext('2d');
       ctx.drawImage(sourceImage, 0, 0, width, height);
 
-      // Vị trí dòng tên trong mẫu ảnh compact2 của VietQR, tính theo tỷ lệ ảnh.
-      const left = Math.round(width * 0.02);
-      // Che trọn dòng tên gốc (kể cả phần đầu dòng) rồi đặt nhãn mới ngay tại đó.
-      const top = Math.round(height * 0.816);
-      const bandWidth = Math.round(width * 0.96);
-      const bandHeight = Math.round(height * 0.068);
+      // Logo NAPAS/BIDV nằm phía trên. Che trọn các dòng tên, nội dung và tiền gốc VietQR.
+      const left = Math.round(width * 0.025);
+      const top = Math.round(height * 0.835);
+      const panelWidth = Math.round(width * 0.95);
+      const panelHeight = Math.round(height * 0.16);
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(left, top, bandWidth, bandHeight);
+      ctx.fillRect(left, top, panelWidth, panelHeight);
 
-      let fontSize = Math.max(16, Math.round(width * 0.037));
+      const safeName = String(displayName || '').trim();
+      const amountText = formatAmountVnd(amount);
+      const fitFont = (text, startSize, maxWidth, weight) => {
+        let size = startSize;
+        ctx.font = weight + ' ' + size + 'px Arial, sans-serif';
+        while (ctx.measureText(text).width > maxWidth && size > 12) {
+          size--;
+          ctx.font = weight + ' ' + size + 'px Arial, sans-serif';
+        }
+        return size;
+      };
+
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#333333';
-      do {
-        ctx.font = '600 ' + fontSize + 'px Arial, sans-serif';
-        if (ctx.measureText(displayName).width <= width * 0.86) break;
-        fontSize--;
-      } while (fontSize > 12);
-      ctx.fillText(displayName, width / 2, top + bandHeight / 2, width * 0.86);
+      const nameWeight = '600';
+      const nameSize = fitFont(safeName, Math.max(17, Math.round(width * 0.037)), width * 0.89, nameWeight);
+      ctx.font = nameWeight + ' ' + nameSize + 'px Arial, sans-serif';
+      ctx.fillText(safeName, width / 2, Math.round(height * 0.89), width * 0.89);
+
+      if (amountText) {
+        const amountLabel = 'Số tiền nộp: ' + amountText;
+        const amountWeight = '400';
+        const amountSize = fitFont(amountLabel, Math.max(16, Math.round(width * 0.032)), width * 0.89, amountWeight);
+        ctx.font = amountWeight + ' ' + amountSize + 'px Arial, sans-serif';
+        ctx.fillText(amountLabel, width / 2, Math.round(height * 0.96), width * 0.89);
+      }
       return canvas.toDataURL('image/png');
     }
 
@@ -229,7 +253,7 @@
       if (item.imageData) return Promise.resolve(item.imageData);
       if (!item.imagePromise) {
         item.imagePromise = loadImage(item.url).then(image => {
-          item.imageData = composeQrImage(image, item.DisplayName || item.AccountName || '');
+          item.imageData = composeQrImage(image, item.DisplayName || item.AccountName || '', item.Amount);
           return item.imageData;
         }).catch(error => {
           item.imagePromise = null;
