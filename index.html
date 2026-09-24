@@ -204,10 +204,11 @@
       ctx.drawImage(sourceImage, 0, 0, width, height);
 
       // Vị trí dòng tên trong mẫu ảnh compact2 của VietQR, tính theo tỷ lệ ảnh.
-      const left = Math.round(width * 0.045);
-      const top = Math.round(height * 0.866);
-      const bandWidth = Math.round(width * 0.91);
-      const bandHeight = Math.round(height * 0.061);
+      const left = Math.round(width * 0.02);
+      // Che trọn dòng tên gốc (kể cả phần đầu dòng) rồi đặt nhãn mới ngay tại đó.
+      const top = Math.round(height * 0.836);
+      const bandWidth = Math.round(width * 0.96);
+      const bandHeight = Math.round(height * 0.068);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(left, top, bandWidth, bandHeight);
 
