@@ -136,7 +136,8 @@
           const [AccountNumber, Bank, BankBin, Amount, AccountName, Remark, Class, StudentID] = rows[i];
           if (!AccountNumber || !BankBin) continue;
 
-          const qrUrl = `https://img.vietqr.io/image/${BankBin}-${AccountNumber}-compact2.png?amount=${Amount || ''}&addInfo=${encodeURIComponent(Remark || '')}&accountName=${encodeURIComponent(AccountName || '')}`;
+          const displayName = formatStudentQrName(AccountName, Class);
+          const qrUrl = `https://img.vietqr.io/image/${BankBin}-${AccountNumber}-compact2.png?amount=${Amount || ''}&addInfo=${encodeURIComponent(Remark || '')}&accountName=${encodeURIComponent(displayName)}`;
 
           let filename = "";
           if (Class && StudentID) {
@@ -148,7 +149,7 @@
           const item = {
             url: qrUrl,
             filename,
-            AccountNumber, Bank, Amount, AccountName, Remark, Class, StudentID
+            AccountNumber, Bank, Amount, AccountName, DisplayName: displayName, Remark, Class, StudentID
           };
           allData.push(item);
         }
@@ -162,6 +163,35 @@
       reader.readAsArrayBuffer(file);
     }
 
+    // Ghép tên học sinh với lớp để ảnh QR luôn hiện đủ mã lớp (ví dụ: TRAN GIA BAO 6A).
+    function formatStudentQrName(accountName, className) {
+      let name = String(accountName || '').trim().replace(/\\s+/g, ' ');
+      const classLabel = String(className || '').trim().replace(/\\s+/g, ' ');
+      if (!classLabel) return name;
+
+      const normalize = value => value.normalize('NFD')
+        .replace(/[\\u0300-\\u036f]/g, '')
+        .replace(/đ/gi, 'd')
+        .replace(/[^a-z0-9]/gi, '')
+        .toUpperCase();
+      const normalizedName = normalize(name);
+      const normalizedClass = normalize(classLabel);
+
+      // Không thêm lớp lần nữa nếu trường AccountName đã có đủ mã lớp.
+      if (normalizedName.endsWith(normalizedClass)) return name;
+
+      // Một số file đã có chữ lớp cuối (A/B) nhưng thiếu chữ số đầu của lớp.
+      const classSuffix = classLabel.replace(/^\\d+/, '');
+      if (classSuffix && normalize(classSuffix)) {
+        const words = name.split(/\\s+/);
+        if (words.length > 1 && normalize(words[words.length - 1]) === normalize(classSuffix)) {
+          words.pop();
+          name = words.join(' ');
+        }
+      }
+      return [name, classLabel].filter(Boolean).join(' ');
+    }
+
     function renderQR(list) {
       const container = document.getElementById('qrs');
       container.innerHTML = "";
@@ -173,7 +203,7 @@
         const div = document.createElement('div');
         div.className = "qr-item";
         div.innerHTML = `
-          <p><b>${item.AccountName || ''}</b><br>
+          <p><b>${item.DisplayName || item.AccountName || ''}</b><br>
           ${item.AccountNumber} (${item.Bank || ''})<br>
           Số tiền: ${item.Amount || ''}<br>
           ${item.Remark || ''}<br>
@@ -192,7 +222,7 @@
         return;
       }
       const filtered = allData.filter(item =>
-        (item.AccountName && item.AccountName.toLowerCase().includes(keyword)) ||
+        ((item.DisplayName && item.DisplayName.toLowerCase().includes(keyword)) || (item.AccountName && item.AccountName.toLowerCase().includes(keyword))) ||
         (item.AccountNumber && item.AccountNumber.toString().includes(keyword)) ||
         (item.Amount && item.Amount.toString().includes(keyword)) ||
         (item.Remark && item.Remark.toLowerCase().includes(keyword))
