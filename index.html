@@ -226,10 +226,16 @@
 
     function prepareQrImage(item) {
       if (item.imageData) return Promise.resolve(item.imageData);
-      return loadImage(item.url).then(image => {
-        item.imageData = composeQrImage(image, item.DisplayName || item.AccountName || '');
-        return item.imageData;
-      });
+      if (!item.imagePromise) {
+        item.imagePromise = loadImage(item.url).then(image => {
+          item.imageData = composeQrImage(image, item.DisplayName || item.AccountName || '');
+          return item.imageData;
+        }).catch(error => {
+          item.imagePromise = null;
+          throw error;
+        });
+      }
+      return item.imagePromise;
     }
 
     function renderQR(list) {
@@ -257,6 +263,18 @@
         image.src = item.imageData || item.url;
 
         const link = div.querySelector('a');
+        if (!item.imageData) {
+          image.addEventListener('load', async () => {
+            if (item.imageData) return;
+            try {
+              item.imageData = await prepareQrImage(item);
+              image.src = item.imageData;
+              link.href = item.imageData;
+            } catch (err) {
+              console.error('Không thể gắn đầy đủ tên/lớp lên ảnh QR:', err);
+            }
+          }, { once: true });
+        }
         link.href = item.imageData || item.url;
         link.addEventListener('click', async event => {
           if (item.imageData) return;
