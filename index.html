@@ -165,12 +165,12 @@
 
     // Ghép tên học sinh với lớp để ảnh QR luôn hiện đủ mã lớp (ví dụ: TRAN GIA BAO 6A).
     function formatStudentQrName(accountName, className) {
-      let name = String(accountName || '').trim().replace(/\\s+/g, ' ');
-      const classLabel = String(className || '').trim().replace(/\\s+/g, ' ');
+      let name = String(accountName || '').trim().replace(/\s+/g, ' ');
+      const classLabel = String(className || '').trim().replace(/\s+/g, ' ');
       if (!classLabel) return name;
 
       const normalize = value => value.normalize('NFD')
-        .replace(/[\\u0300-\\u036f]/g, '')
+        .replace(/[\u0300-\u036f]/g, '')
         .replace(/đ/gi, 'd')
         .replace(/[^a-z0-9]/gi, '')
         .toUpperCase();
@@ -181,9 +181,9 @@
       if (normalizedName.endsWith(normalizedClass)) return name;
 
       // Một số file đã có chữ lớp cuối (A/B) nhưng thiếu chữ số đầu của lớp.
-      const classSuffix = classLabel.replace(/^\\d+/, '');
+      const classSuffix = classLabel.replace(/^\d+/, '');
       if (classSuffix && normalize(classSuffix)) {
-        const words = name.split(/\\s+/);
+        const words = name.split(/\s+/);
         if (words.length > 1 && normalize(words[words.length - 1]) === normalize(classSuffix)) {
           words.pop();
           name = words.join(' ');
