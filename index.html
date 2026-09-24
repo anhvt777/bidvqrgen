@@ -64,6 +64,38 @@
       font-weight: bold;
     }
     #downloadAll:hover { background: #e6b22b; }
+    .class-export {
+      display: none;
+      flex: 1;
+      min-width: 300px;
+      gap: 8px;
+    }
+    #classSelect {
+      flex: 1;
+      min-width: 135px;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+      font-size: 14px;
+    }
+    #downloadClass {
+      flex: 1;
+      min-width: 155px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      background: #006B68;
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #downloadClass:disabled { opacity: .55; cursor: not-allowed; }
+    @media (max-width: 600px) {
+      .class-export { min-width: 100%; }
+      #classSelect, #downloadClass { min-width: 0; }
+    }
     
     #qrs {
       display: grid;
@@ -106,6 +138,12 @@
     <div id="controls">
       <input type="file" id="upload" accept=".xlsx,.xls" />
       <input type="text" id="search" placeholder="🔍 Tìm theo AccountName / AccountNumber / Amount / Remark..." />
+      <div id="classExport" class="class-export">
+        <select id="classSelect" aria-label="Chọn lớp để xuất QR">
+          <option value="">Chọn lớp để xuất QR</option>
+        </select>
+        <button id="downloadClass" type="button" disabled>⬇ Xuất QR theo lớp</button>
+      </div>
       <button id="downloadAll" style="display:none;">⬇ Tải tất cả QR (ZIP)</button>
     </div>
 
@@ -119,6 +157,8 @@
     document.getElementById('upload').addEventListener('change', handleFile, false);
     document.getElementById('downloadAll').addEventListener('click', downloadAll, false);
     document.getElementById('search').addEventListener('input', filterQR, false);
+    document.getElementById('classSelect').addEventListener('change', updateClassExportButton, false);
+    document.getElementById('downloadClass').addEventListener('click', downloadSelectedClass, false);
 
     function handleFile(e) {
       const file = e.target.files[0];
@@ -139,21 +179,16 @@
           const displayName = formatStudentQrName(AccountName, Class);
           const qrUrl = `https://img.vietqr.io/image/${BankBin}-${AccountNumber}-compact2.png?amount=${Amount || ''}&addInfo=${encodeURIComponent(Remark || '')}&accountName=${encodeURIComponent(displayName)}`;
 
-          let filename = "";
-          if (Class && StudentID) {
-            filename = `${Class}_${StudentID}.png`;
-          } else {
-            filename = `qr_${AccountNumber}.png`;
-          }
-
           const item = {
             url: qrUrl,
-            filename,
+            filename: "",
             AccountNumber, Bank, Amount, AccountName, DisplayName: displayName, Remark, Class, StudentID
           };
           allData.push(item);
         }
 
+        assignExportFilenames(allData);
+        updateClassExportOptions(allData);
         renderQR(allData);
 
         if (allData.length > 0) {
@@ -332,18 +367,90 @@
       renderQR(filtered);
     }
 
+    function safePathSegment(value) {
+      return String(value || '')
+        .normalize('NFC')
+        .replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/[. ]+$/g, '')
+        .trim()
+        .slice(0, 100) || 'Khong ro';
+    }
+
+    function studentNameOnly(item) {
+      const fullName = String(item.DisplayName || item.AccountName || '').trim();
+      const className = String(item.Class || '').trim();
+      if (className && fullName.slice(-className.length).toLocaleUpperCase() === className.toLocaleUpperCase()) {
+        return fullName.slice(0, -className.length).replace(/[\s_-]+$/g, '').trim();
+      }
+      return fullName;
+    }
+
+    function assignExportFilenames(items) {
+      const used = new Map();
+      items.forEach((item, index) => {
+        const classPart = safePathSegment(item.Class || 'Khong lop');
+        const namePart = safePathSegment(studentNameOnly(item) || 'Khong ten');
+        const idPart = safePathSegment(item.StudentID || `STT${index + 1}`);
+        const base = `${classPart}_${namePart}_${idPart}`;
+        const count = (used.get(base) || 0) + 1;
+        used.set(base, count);
+        item.filename = `${base}${count > 1 ? `_QR${count}` : ''}.png`;
+      });
+    }
+
+    function updateClassExportOptions(items) {
+      const group = document.getElementById('classExport');
+      const select = document.getElementById('classSelect');
+      const classes = [...new Set(items.map(item => String(item.Class || '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'vi', {numeric:true, sensitivity:'base'}));
+      select.innerHTML = '<option value="">Chọn lớp để xuất QR</option>';
+      classes.forEach(className => {
+        const option = document.createElement('option');
+        option.value = className;
+        option.textContent = className;
+        select.appendChild(option);
+      });
+      group.style.display = classes.length ? 'flex' : 'none';
+      select.disabled = classes.length === 0;
+      updateClassExportButton();
+    }
+
+    function updateClassExportButton() {
+      const select = document.getElementById('classSelect');
+      const button = document.getElementById('downloadClass');
+      const className = select.value;
+      const count = allData.filter(item => String(item.Class || '').trim() === className).length;
+      button.disabled = !className || count === 0;
+      button.textContent = className && count
+        ? `⬇ Xuất QR lớp ${className} (${count} ảnh)`
+        : '⬇ Xuất QR theo lớp';
+    }
+
+    async function downloadSelectedClass() {
+      const className = document.getElementById('classSelect').value;
+      if (!className) return;
+      const items = allData.filter(item => String(item.Class || '').trim() === className);
+      await downloadItemsAsZip(items, `QR_Lop_${safePathSegment(className)}.zip`);
+    }
+
     async function downloadAll() {
+      await downloadItemsAsZip(allData, 'QR_Tat_ca_cac_lop.zip');
+    }
+
+    async function downloadItemsAsZip(items, zipName) {
       const zip = new JSZip();
-      for (const qr of qrList) {
+      for (const qr of items) {
         try {
           const dataUrl = await prepareQrImage(qr);
-          zip.file(qr.filename, dataURLToBlob(dataUrl));
+          const folder = zip.folder(safePathSegment(qr.Class || 'Khong lop'));
+          folder.file(qr.filename, dataURLToBlob(dataUrl));
         } catch (err) {
           console.error("Lỗi tạo ảnh QR:", qr.url, err);
         }
       }
-      const content = await zip.generateAsync({type: "blob"});
-      saveAs(content, "all_qr_codes.zip");
+      const content = await zip.generateAsync({type: 'blob', compression: 'STORE'});
+      saveAs(content, zipName);
     }
 
     function loadImage(url) {
