@@ -192,13 +192,53 @@
       return [name, classLabel].filter(Boolean).join(' ');
     }
 
+    // VietQR trả về ảnh có thể đã chuẩn hóa tên và làm mất số của mã lớp.
+    // Vẽ lại riêng dòng tên trên ảnh, giữ nguyên QR và các thông tin thanh toán.
+    function composeQrImage(sourceImage, displayName) {
+      const width = sourceImage.naturalWidth || sourceImage.width;
+      const height = sourceImage.naturalHeight || sourceImage.height;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(sourceImage, 0, 0, width, height);
+
+      // Vị trí dòng tên trong mẫu ảnh compact2 của VietQR, tính theo tỷ lệ ảnh.
+      const left = Math.round(width * 0.045);
+      const top = Math.round(height * 0.866);
+      const bandWidth = Math.round(width * 0.91);
+      const bandHeight = Math.round(height * 0.061);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(left, top, bandWidth, bandHeight);
+
+      let fontSize = Math.max(16, Math.round(width * 0.037));
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#333333';
+      do {
+        ctx.font = '600 ' + fontSize + 'px Arial, sans-serif';
+        if (ctx.measureText(displayName).width <= width * 0.86) break;
+        fontSize--;
+      } while (fontSize > 12);
+      ctx.fillText(displayName, width / 2, top + bandHeight / 2, width * 0.86);
+      return canvas.toDataURL('image/png');
+    }
+
+    function prepareQrImage(item) {
+      if (item.imageData) return Promise.resolve(item.imageData);
+      return loadImage(item.url).then(image => {
+        item.imageData = composeQrImage(image, item.DisplayName || item.AccountName || '');
+        return item.imageData;
+      });
+    }
+
     function renderQR(list) {
       const container = document.getElementById('qrs');
       container.innerHTML = "";
       qrList = [];
 
       list.forEach(item => {
-        qrList.push({url: item.url, filename: item.filename});
+        qrList.push(item);
 
         const div = document.createElement('div');
         div.className = "qr-item";
@@ -208,9 +248,28 @@
           Số tiền: ${item.Amount || ''}<br>
           ${item.Remark || ''}<br>
           ${item.Class || ''} - ${item.StudentID || ''}</p>
-          <img src="${item.url}" alt="QR" />
-          <a href="${item.url}" download="${item.filename}">⬇ Lưu ảnh (${item.filename})</a>
+          <img alt="QR" />
+          <a download="${item.filename}">⬇ Lưu ảnh (${item.filename})</a>
         `;
+        const image = div.querySelector('img');
+        image.loading = 'lazy';
+        image.alt = 'QR ' + (item.DisplayName || item.AccountName || '');
+        image.src = item.imageData || item.url;
+
+        const link = div.querySelector('a');
+        link.href = item.imageData || item.url;
+        link.addEventListener('click', async event => {
+          if (item.imageData) return;
+          event.preventDefault();
+          try {
+            item.imageData = await prepareQrImage(item);
+            link.href = item.imageData;
+            link.click();
+          } catch (err) {
+            console.error('Không thể tạo ảnh QR có tên lớp:', err);
+            alert('Không thể tạo ảnh tải xuống. Vui lòng tải lại trang và thử lại.');
+          }
+        });
         container.appendChild(div);
       });
     }
@@ -234,23 +293,10 @@
       const zip = new JSZip();
       for (const qr of qrList) {
         try {
-          const response = await fetch(qr.url, {mode: "cors"});
-          const blob = await response.blob();
-          if (blob.type.startsWith("image/")) {
-            zip.file(qr.filename, blob);
-          } else {
-            const img = await loadImage(qr.url);
-            const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0);
-            const dataUrl = canvas.toDataURL("image/png");
-            const dataBlob = dataURLToBlob(dataUrl);
-            zip.file(qr.filename, dataBlob);
-          }
+          const dataUrl = await prepareQrImage(qr);
+          zip.file(qr.filename, dataURLToBlob(dataUrl));
         } catch (err) {
-          console.error("Lỗi tải ảnh:", qr.url, err);
+          console.error("Lỗi tạo ảnh QR:", qr.url, err);
         }
       }
       const content = await zip.generateAsync({type: "blob"});
