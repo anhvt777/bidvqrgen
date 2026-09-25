@@ -334,10 +334,11 @@
       return canvas.toDataURL('image/png');
     }
 
-    function prepareQrImage(item) {
+    function prepareQrImage(item, loadedQrImage = null) {
       if (item.imageData) return Promise.resolve(item.imageData);
       if (!item.imagePromise) {
-        item.imagePromise = Promise.all([loadImage(item.url), loadBrandingImages()]).then(([image, logos]) => {
+        const qrImagePromise = loadedQrImage ? Promise.resolve(loadedQrImage) : loadImage(item.url);
+        item.imagePromise = Promise.all([qrImagePromise, loadBrandingImages()]).then(([image, logos]) => {
           item.imageData = composeQrImage(image, item.DisplayName || item.AccountName || '', item.Amount, logos[0], logos[1]);
           return item.imageData;
         }).catch(error => {
@@ -376,7 +377,7 @@
             if (item.imageData || item.composingPreview) return;
             item.composingPreview = true;
             try {
-              item.imageData = await prepareQrImage(item);
+              item.imageData = await prepareQrImage(item, image);
               image.src = item.imageData;
               link.href = item.imageData;
             } catch (err) {
@@ -386,6 +387,7 @@
             }
           };
           image.addEventListener('load', composePreview, { once: true });
+          image.crossOrigin = 'anonymous';
           image.src = item.url;
           // Xử lý cả trường hợp ảnh đã có sẵn trong bộ nhớ đệm của trình duyệt.
           if (image.complete && image.naturalWidth) composePreview();
@@ -397,7 +399,7 @@
           if (item.imageData) return;
           event.preventDefault();
           try {
-            item.imageData = await prepareQrImage(item);
+            item.imageData = await prepareQrImage(item, image.complete && image.naturalWidth ? image : null);
             link.href = item.imageData;
             link.click();
           } catch (err) {
