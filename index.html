@@ -384,11 +384,12 @@
               image.src = item.imageData;
               link.href = item.imageData;
             } catch (err) {
+              const reason = err && err.message ? err.message : String(err);
               console.error('Không thể ghép logo/tạo ảnh QR:', err);
               link.removeAttribute('href');
               link.removeAttribute('download');
-              link.textContent = '⚠ Ảnh QR chưa tạo được';
-              link.title = 'Lỗi tạo ảnh: ' + (err && err.message ? err.message : String(err));
+              link.textContent = '⚠ Lỗi tạo ảnh QR';
+              link.title = reason;
             } finally {
               item.composingPreview = false;
             }
@@ -412,7 +413,11 @@
           } catch (err) {
             console.error('Không thể tạo ảnh QR có tên lớp:', err);
             const reason = err && err.message ? err.message : String(err);
-            alert('Không thể tạo ảnh QR: ' + reason + '. Vui lòng kiểm tra kết nối và thử lại.');
+            link.removeAttribute('href');
+            link.removeAttribute('download');
+            link.textContent = '⚠ Lỗi tạo ảnh QR';
+            link.title = reason;
+            alert('Không thể tạo ảnh QR: ' + reason);
           }
         });
         container.appendChild(div);
@@ -506,15 +511,34 @@
     }
 
     async function downloadItemsAsZip(items, zipName) {
+      if (!items.length) {
+        alert('Không có ảnh QR để đưa vào tệp ZIP.');
+        return;
+      }
       const zip = new JSZip();
+      const failures = [];
+      let added = 0;
       for (const qr of items) {
         try {
           const dataUrl = await prepareQrImage(qr);
           const folder = zip.folder(safePathSegment(qr.Class || 'Khong lop'));
           folder.file(qr.filename, dataURLToBlob(dataUrl));
+          added++;
         } catch (err) {
-          console.error("Lỗi tạo ảnh QR:", qr.url, err);
+          const reason = err && err.message ? err.message : String(err);
+          failures.push(qr.filename + ': ' + reason);
+          console.error('Lỗi tạo ảnh QR:', qr.filename, err);
         }
+      }
+      if (failures.length) {
+        const firstFailure = failures[0];
+        alert('Dừng xuất ZIP để tránh tạo tệp thiếu ảnh. Tạo được ' + added + '/' + items.length +
+          ' ảnh. Lỗi đầu tiên: ' + firstFailure);
+        return;
+      }
+      if (!added) {
+        alert('Không tạo được ảnh QR nên ZIP không được xuất.');
+        return;
       }
       const content = await zip.generateAsync({type: 'blob', compression: 'STORE'});
       saveAs(content, zipName);
@@ -527,7 +551,9 @@
         // Chỉ bật CORS cho ảnh VietQR từ máy chủ bên ngoài để canvas có thể xuất PNG.
         if (!String(url).startsWith('data:')) img.crossOrigin = "anonymous";
         img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error('Không tải được ảnh QR/logo: ' + String(url).slice(0, 100)));
+        img.onerror = () => reject(new Error(String(url).startsWith('data:')
+          ? 'Không tải được logo đã nhúng trong trang.'
+          : 'Không tải được ảnh VietQR từ máy chủ. Kiểm tra kết nối hoặc CORS.'));
         img.src = url;
       });
     }
