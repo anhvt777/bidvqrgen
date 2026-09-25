@@ -261,22 +261,20 @@
       ctx.drawImage(sourceImage, 0, 0, width, height);
 
       // Che nhận diện VietQR phía trên, thay bằng logo trường và BIDV theo bố cục cân đối.
-      const topLeft = Math.round(width * 0.025);
-      const topWidth = Math.round(width * 0.95);
       const topHeight = Math.round(height * 0.13);
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(topLeft, 0, topWidth, topHeight);
+      ctx.fillRect(0, 0, width, topHeight);
 
       const centerY = height * 0.065;
       const schoolSize = Math.min(width * 0.15, height * 0.104);
-      ctx.drawImage(schoolLogo, width * 0.35 - schoolSize / 2, centerY - schoolSize / 2, schoolSize, schoolSize);
+      ctx.drawImage(schoolLogo, width * 0.30 - schoolSize / 2, centerY - schoolSize / 2, schoolSize, schoolSize);
 
       // Vạch ngăn mảnh cân bằng hai nhận diện.
       ctx.fillStyle = '#d9e1e7';
-      ctx.fillRect(Math.round(width * 0.5), height * 0.027, Math.max(1, Math.round(width * 0.003)), height * 0.076);
+      ctx.fillRect(Math.round(width * 0.42), height * 0.027, Math.max(1, Math.round(width * 0.003)), height * 0.076);
 
       const markSize = Math.min(width * 0.09, height * 0.066);
-      const markX = width * 0.52;
+      const markX = width * 0.47;
       ctx.drawImage(bidvMark, markX, centerY - markSize / 2, markSize, markSize);
       ctx.fillStyle = '#006b68';
       ctx.font = '700 ' + Math.max(16, Math.round(height * 0.052)) + 'px Arial, sans-serif';
