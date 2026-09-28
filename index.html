@@ -137,6 +137,10 @@
   <main>
     <div id="controls">
       <input type="file" id="upload" accept=".xlsx,.xls" />
+      <label>Tên trường <input id="schoolName" type="text" placeholder="Nhập tên trường để lưu logo riêng" /></label>
+      <label>Logo trường (tùy chọn) <input id="schoolLogo" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+      <button id="removeSchoolLogo" type="button">Xóa logo trường này</button>
+      <small id="schoolLogoStatus" role="status"></small>
       <input type="text" id="search" placeholder="🔍 Tìm theo AccountName / AccountNumber / Amount / Remark..." />
       <div id="classExport" class="class-export">
         <select id="classSelect" aria-label="Chọn lớp để xuất QR">
@@ -151,9 +155,77 @@
   </main>
 
   <script>
-    const SCHOOL_LOGO_DATA = 'data:image/png;base64,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';
     const BIDV_MARK_DATA = 'data:image/png;base64,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';
     let brandingImagesPromise = null;
+    const schoolNameInput = document.getElementById('schoolName');
+    const schoolLogoInput = document.getElementById('schoolLogo');
+    const schoolLogoStatus = document.getElementById('schoolLogoStatus');
+    const logoStoragePrefix = 'bidvqrgen:school-logo:';
+    const schoolLogos = new Map();
+    schoolNameInput.value = localStorage.getItem('bidvqrgen:school-name') || '';
+    let logoIsTemporary = false;
+
+    function schoolKey() {
+      return schoolNameInput.value.trim().normalize('NFC').toLocaleLowerCase('vi-VN');
+    }
+    function currentSchoolLogo() {
+      const key = schoolKey();
+      if (!key) return null;
+      if (schoolLogos.has(key)) return schoolLogos.get(key);
+      try { return localStorage.getItem(logoStoragePrefix + key); }
+      catch (error) { return null; }
+    }
+    function updateLogoStatus() {
+      schoolLogoStatus.textContent = logoIsTemporary ? 'Logo chỉ dùng trong phiên này vì bộ nhớ trình duyệt đã đầy.' : !schoolKey()
+        ? 'Nhập tên trường để gắn logo riêng.'
+        : currentSchoolLogo() ? 'Đã có logo cho trường này.' : 'Chưa có logo: ảnh QR sẽ dùng hoa mai BIDV ở giữa.';
+    }
+    function refreshBranding() {
+      for (const item of allData) {
+        item.imageData = null;
+        item.imagePromise = null;
+        item.schoolLogoData = currentSchoolLogo();
+      }
+      renderQR(allData);
+      updateLogoStatus();
+    }
+    schoolNameInput.addEventListener('change', () => {
+      localStorage.setItem('bidvqrgen:school-name', schoolNameInput.value.trim());
+      logoIsTemporary = false;
+      schoolLogoInput.value = '';
+      refreshBranding();
+    });
+    schoolNameInput.addEventListener('input', updateLogoStatus);
+    schoolLogoInput.addEventListener('change', async () => {
+      const file = schoolLogoInput.files[0];
+      if (!file) return;
+      if (!schoolKey()) { alert('Vui lòng nhập tên trường trước khi tải logo.'); schoolLogoInput.value = ''; return; }
+      if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) {
+        alert('Chọn ảnh PNG, JPG hoặc WebP nhỏ hơn 2 MB.'); schoolLogoInput.value = ''; return;
+      }
+      const data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      try { await loadImage(data); } catch (error) { alert('Không đọc được logo trường.'); return; }
+      const key = schoolKey();
+      schoolLogos.set(key, data);
+      logoIsTemporary = false;
+      try { localStorage.setItem(logoStoragePrefix + key, data); }
+      catch (error) { logoIsTemporary = true; }
+      refreshBranding();
+    });
+    document.getElementById('removeSchoolLogo').addEventListener('click', () => {
+      if (!schoolKey()) return;
+      schoolLogos.delete(schoolKey());
+      logoIsTemporary = false;
+      localStorage.removeItem(logoStoragePrefix + schoolKey());
+      schoolLogoInput.value = '';
+      refreshBranding();
+    });
+    updateLogoStatus();
 
     let qrList = [];
     let allData = [];
@@ -186,7 +258,8 @@
           const item = {
             url: qrUrl,
             filename: "",
-            AccountNumber, Bank, Amount, AccountName, DisplayName: displayName, Remark, Class, StudentID
+            AccountNumber, Bank, Amount, AccountName, DisplayName: displayName, Remark, Class, StudentID,
+            schoolLogoData: currentSchoolLogo()
           };
           allData.push(item);
         }
@@ -244,7 +317,6 @@
     function loadBrandingImages() {
       if (!brandingImagesPromise) {
         brandingImagesPromise = Promise.all([
-          loadImage(SCHOOL_LOGO_DATA),
           loadImage(BIDV_MARK_DATA)
         ]).catch(error => {
           brandingImagesPromise = null;
@@ -269,21 +341,19 @@
       ctx.fillRect(0, 0, width, topHeight);
 
       const centerY = height * 0.065;
-      const schoolSize = Math.min(width * 0.15, height * 0.104);
-      ctx.drawImage(schoolLogo, width * 0.30 - schoolSize / 2, centerY - schoolSize / 2, schoolSize, schoolSize);
-
-      // Vạch ngăn mảnh cân bằng hai nhận diện.
-      ctx.fillStyle = '#d9e1e7';
-      ctx.fillRect(Math.round(width * 0.42), height * 0.027, Math.max(1, Math.round(width * 0.003)), height * 0.076);
-
-      const markSize = Math.min(width * 0.09, height * 0.066);
-      const markX = width * 0.47;
-      ctx.drawImage(bidvMark, markX, centerY - markSize / 2, markSize, markSize);
-      ctx.fillStyle = '#006b68';
-      ctx.font = '700 ' + Math.max(16, Math.round(height * 0.052)) + 'px Arial, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('BIDV', markX + markSize + width * 0.018, centerY, width * 0.20);
+      const drawContained = (image, x, size) => {
+        const ratio = Math.min(size / image.naturalWidth, size / image.naturalHeight);
+        const w = image.naturalWidth * ratio, h = image.naturalHeight * ratio;
+        ctx.drawImage(image, x - w / 2, centerY - h / 2, w, h);
+      };
+      if (schoolLogo) {
+        drawContained(schoolLogo, width * 0.34, Math.min(width * 0.15, height * 0.104));
+        ctx.fillStyle = '#d9e1e7';
+        ctx.fillRect(Math.round(width * 0.5), height * 0.027, Math.max(1, Math.round(width * 0.003)), height * 0.076);
+        drawContained(bidvMark, width * 0.66, Math.min(width * 0.15, height * 0.104));
+      } else {
+        drawContained(bidvMark, width / 2, Math.min(width * 0.15, height * 0.104));
+      }
 
       // Che tên/nội dung/số tiền gốc dưới QR để chỉ còn thông tin học sinh đã nhập.
       const left = Math.round(width * 0.025);
@@ -341,8 +411,9 @@
       if (item.imageData) return Promise.resolve(item.imageData);
       if (!item.imagePromise) {
         const qrImagePromise = loadedQrImage ? Promise.resolve(loadedQrImage) : loadImage(item.url);
-        item.imagePromise = Promise.all([qrImagePromise, loadBrandingImages()]).then(([image, logos]) => {
-          item.imageData = composeQrImage(image, item.DisplayName || item.AccountName || '', item.Amount, logos[0], logos[1]);
+        const schoolLogoPromise = item.schoolLogoData ? loadImage(item.schoolLogoData) : Promise.resolve(null);
+        item.imagePromise = Promise.all([qrImagePromise, loadBrandingImages(), schoolLogoPromise]).then(([image, logos, schoolLogo]) => {
+          item.imageData = composeQrImage(image, item.DisplayName || item.AccountName || '', item.Amount, schoolLogo, logos[0]);
           return item.imageData;
         }).catch(error => {
           item.imagePromise = null;
