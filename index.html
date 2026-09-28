@@ -209,7 +209,11 @@
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-      try { await loadImage(data); } catch (error) { alert('Không đọc được logo trường.'); return; }
+      let logoImage;
+      try { logoImage = await loadImage(data); } catch (error) { alert('Không đọc được logo trường.'); return; }
+      if (Math.min(logoImage.naturalWidth, logoImage.naturalHeight) < 300) {
+        alert('Logo gốc khá nhỏ (' + logoImage.naturalWidth + ' × ' + logoImage.naturalHeight + ' px). Nên chọn ảnh PNG hoặc WebP từ 500 × 500 px để chi tiết rõ hơn khi in.');
+      }
       const key = schoolKey();
       schoolLogos.set(key, data);
       logoIsTemporary = false;
@@ -330,10 +334,17 @@
       const width = sourceImage.naturalWidth || sourceImage.width;
       const height = sourceImage.naturalHeight || sourceImage.height;
       const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
+      // Xuất ở 2 lần kích thước gốc; logo và chữ được vẽ trực tiếp ở độ phân giải cao.
+      // Giữ các ô QR sắc cạnh khi phóng, chỉ bật nội suy mượt cho logo.
+      const outputScale = 2;
+      canvas.width = width * outputScale;
+      canvas.height = height * outputScale;
       const ctx = canvas.getContext('2d');
+      ctx.scale(outputScale, outputScale);
+      ctx.imageSmoothingEnabled = false;
       ctx.drawImage(sourceImage, 0, 0, width, height);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
       // Che nhận diện VietQR phía trên, thay bằng logo trường và BIDV theo bố cục cân đối.
       const topHeight = Math.round(height * 0.13);
@@ -391,19 +402,6 @@
         ctx.fillText(amountLabel, width / 2, Math.round(height * 0.96), width * 0.89);
       }
 
-      // PNG lossless: giảm kích thước ảnh lớn bằng điểm ảnh nguyên khối để ô QR luôn sắc nét.
-      const maxWidth = 760;
-      const maxHeight = 1120;
-      const scale = Math.min(1, maxWidth / width, maxHeight / height);
-      if (scale < 1) {
-        const output = document.createElement('canvas');
-        output.width = Math.round(width * scale);
-        output.height = Math.round(height * scale);
-        const outputCtx = output.getContext('2d');
-        outputCtx.imageSmoothingEnabled = false;
-        outputCtx.drawImage(canvas, 0, 0, output.width, output.height);
-        return output.toDataURL('image/png');
-      }
       return canvas.toDataURL('image/png');
     }
 
