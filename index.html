@@ -135,6 +135,11 @@
   </header>
 
   <main>
+    <div class="mode-tabs" role="tablist" aria-label="Chọn chức năng">
+      <button class="mode-tab active" id="qrModeTab" type="button">▦ Tạo QR</button>
+      <button class="mode-tab" id="noticeModeTab" type="button">✉ Thông báo nộp tiền</button>
+    </div>
+    <div class="mode-help" id="modeHelp">Tải file Excel một lần để tạo QR theo từng dòng hoặc xuất thông báo khoản thu hàng loạt.</div>
     <div id="controls">
       <input type="file" id="upload" accept=".xlsx,.xls" />
       <label>Tên trường <input id="schoolName" type="text" placeholder="Nhập tên trường để lưu logo riêng" /></label>
@@ -152,6 +157,54 @@
     </div>
 
     <div id="qrs"></div>
+
+    <section id="noticeTool" class="notice-tool" hidden>
+      <div class="notice-grid">
+        <article class="notice-card">
+          <div class="notice-card-head">
+            <div><b>1. Chọn đối tượng & khoản thu</b><small>Dữ liệu lấy trực tiếp từ file Excel đã tải.</small></div>
+            <span>BIDV QR</span>
+          </div>
+          <div class="notice-fields">
+            <label>Lớp<select id="noticeClass"><option value="all">Tất cả lớp</option></select></label>
+            <label>Học sinh<select id="noticeStudent"><option value="all">Tất cả học sinh trong phạm vi</option></select></label>
+            <label>Hạn nộp<input id="noticeDeadline" type="date"></label>
+            <label>Trạng thái<select id="noticeStatus"><option value="all">Tất cả khoản trong file</option></select></label>
+            <label class="notice-wide">Khoản cần thông báo
+              <select id="noticeFees" multiple size="7"><option value="all" selected>Tất cả khoản phù hợp</option></select>
+              <small>Giữ Ctrl/Cmd để chọn nhiều khoản. Nếu file chưa có cột “Khoản thu”, web dùng Remark làm tên khoản.</small>
+            </label>
+            <label class="notice-wide">Lời nhắn cuối thông báo
+              <textarea id="noticeMessage" rows="3">Nếu phụ huynh đã thanh toán, vui lòng bỏ qua thông báo này.</textarea>
+            </label>
+          </div>
+          <div class="notice-stats">
+            <div><span>Số học sinh</span><strong id="noticeStudentCount">0</strong></div>
+            <div><span>Số khoản</span><strong id="noticeFeeCount">0</strong></div>
+            <div><span>Tổng tiền</span><strong id="noticeGrandTotal">0 ₫</strong></div>
+          </div>
+        </article>
+
+        <article class="notice-card">
+          <div class="notice-card-head">
+            <div><b>2. Chọn đầu ra</b><small>Cùng dữ liệu, cùng QR thanh toán.</small></div>
+          </div>
+          <label class="template-option selected"><input type="radio" name="noticeTemplate" value="a4" checked><span><b>Mẫu A4 chuẩn</b><small>In/PDF, mỗi học sinh một trang.</small></span><em>A4</em></label>
+          <label class="template-option"><input type="radio" name="noticeTemplate" value="mobile"><span><b>Mẫu ảnh điện thoại</b><small>Gọn, QR lớn, gửi Zalo/Messenger.</small></span><em>9:16</em></label>
+          <div class="notice-actions">
+            <button id="previewNotices" type="button">Xem trước</button>
+            <button id="printNotices" type="button">🖨 In / Lưu PDF A4</button>
+            <button id="downloadNoticeImages" type="button">⬇ Xuất ZIP ảnh PNG</button>
+          </div>
+          <div class="notice-note"><b>QR thanh toán:</b> sử dụng chính BankBin, AccountNumber và AccountName từ file Excel. Không cần cấu hình lại tài khoản nhận tiền.</div>
+        </article>
+      </div>
+      <article class="notice-card notice-preview-card">
+        <div class="notice-card-head"><div><b>Xem trước</b><small id="noticePreviewSummary">Chọn dữ liệu rồi bấm “Xem trước”.</small></div><span id="noticeQrStatus">Chưa tạo QR</span></div>
+        <div id="noticePreview" class="notice-preview"><div class="notice-empty">Chưa có thông báo được tạo.</div></div>
+      </article>
+    </section>
+    <div id="noticePrintRoot" aria-hidden="true"></div>
   </main>
 
   <script>
