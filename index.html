@@ -931,7 +931,7 @@
       }).join('')+(entries.length>6?'<div class="notice-empty">… và '+(entries.length-6)+' thông báo khác sẽ được xuất.</div>':'');
     }
 
-    async function previewNotices() {    async function previewNotices() {
+    async function previewNotices() {
       const entries=await buildNoticeEntries();window.noticeEntries=entries;renderNoticePreview(entries);
     }
     function noticePdfTitle(entries) {
@@ -1019,7 +1019,7 @@
       return canvas.toDataURL('image/png');
     }
 
-    async function downloadNoticeImages() {    async function downloadNoticeImages() {
+    async function downloadNoticeImages() {
       const entries=await buildNoticeEntries(),zip=new JSZip();let done=0;document.getElementById('noticeQrStatus').textContent='Đang tạo ảnh…';
       for(const entry of entries){const data=await mobileNoticePng(entry),folder=zip.folder(safePathSegment(entry.student.Class||'Khong lop'));folder.file(safePathSegment(entry.student.Class||'Lop')+'_'+safePathSegment(studentNameOnly(entry.student))+'_'+safePathSegment(entry.student.StudentID||'HS')+'.png',dataURLToBlob(data));done++;document.getElementById('noticeQrStatus').textContent=done+'/'+entries.length+' ảnh';}
       const blob=await zip.generateAsync({type:'blob',compression:'STORE'});saveAs(blob,'Thong_bao_khoan_thu_'+new Date().toISOString().slice(0,10)+'.zip');document.getElementById('noticeQrStatus').textContent=entries.length+' ảnh đã xuất';
