@@ -934,12 +934,15 @@
     async function previewNotices() {
       const entries=await buildNoticeEntries();window.noticeEntries=entries;renderNoticePreview(entries);
     }
-    function noticePdfTitle(entries) {
+    function noticeExportBaseName(entries) {
       const classes=[...new Set(entries.map(e=>String(e.student.Class||'').trim()).filter(Boolean))];
       const fees=[...new Set(entries.flatMap(e=>e.items.map(item=>String(item.FeeName||item.Remark||'Khoản thu').trim())).filter(Boolean))];
-      const classPart=classes.length===1?classes[0]:'Tat_ca_lop';
-      let feePart=fees.length===1?fees[0]:(fees.length===2?fees.join('_'):'Nhieu_khoan');
+      const classPart=classes.length===1?classes[0]:'Tất cả lớp';
+      const feePart=fees.length===1?fees[0]:'Nhiều khoản';
       return safePathSegment(classPart+'_'+feePart);
+    }
+    function noticePdfTitle(entries) {
+      return safePathSegment(noticeExportBaseName(entries)+'_Thông báo nộp tiền');
     }
 
     async function printNotices() {
@@ -1022,7 +1025,10 @@
     async function downloadNoticeImages() {
       const entries=await buildNoticeEntries(),zip=new JSZip();let done=0;document.getElementById('noticeQrStatus').textContent='Đang tạo ảnh…';
       for(const entry of entries){const data=await mobileNoticePng(entry),folder=zip.folder(safePathSegment(entry.student.Class||'Khong lop'));folder.file(safePathSegment(entry.student.Class||'Lop')+'_'+safePathSegment(studentNameOnly(entry.student))+'_'+safePathSegment(entry.student.StudentID||'HS')+'.png',dataURLToBlob(data));done++;document.getElementById('noticeQrStatus').textContent=done+'/'+entries.length+' ảnh';}
-      const blob=await zip.generateAsync({type:'blob',compression:'STORE'});saveAs(blob,'Thong_bao_khoan_thu_'+new Date().toISOString().slice(0,10)+'.zip');document.getElementById('noticeQrStatus').textContent=entries.length+' ảnh đã xuất';
+      const blob=await zip.generateAsync({type:'blob',compression:'STORE'});
+      const zipName=safePathSegment(noticeExportBaseName(entries)+'_Ảnh thông báo')+'.zip';
+      saveAs(blob,zipName);
+      document.getElementById('noticeQrStatus').textContent=entries.length+' ảnh đã xuất';
     }
     function setMode(mode) {
       const notice=mode==='notice';document.getElementById('noticeTool').hidden=!notice;document.getElementById('qrs').hidden=notice;
