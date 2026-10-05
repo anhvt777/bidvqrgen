@@ -55,7 +55,7 @@ function insuranceCanvas(entry){
   c.fillStyle='#eef7f5';c.fillRect(62,272,1116,160);
   text('HỌC SINH',86,291,21,muted,'700');text(entry.student.name,86,325,39,ink,'700','left',1060);
   text('Lớp: '+(entry.student.className||'—'),86,386,26,ink,'700');text('Mã HS: '+entry.student.code,1154,386,26,ink,'400','right',830);
-  text('CÁC KHOẢN THU',62,477,23,muted,'700');
+  text('CHI TIẾT KHOẢN THU · CHỌN CÁCH NỘP BÊN DƯỚI',62,477,23,muted,'700');
   text('Bảo hiểm y tế (BHYT)',62,522,28,ink,'700');text(entry.healthPaid?'ĐÃ NỘP':money(entry.health.amount),1178,522,28,teal,'700','right');
   text('Bắt buộc theo đối tượng tham gia · Mức thu đã phân giao',62,562,23,muted);
   text('Bảo hiểm thân thể (BHTT)',62,613,28,ink,'700');text(entry.bodyPaid?'ĐÃ NỘP':money(entry.body.amount),1178,613,28,teal,'700','right');
@@ -71,16 +71,17 @@ function insuranceCanvas(entry){
       const x=start+i*576,y=734;
       c.strokeStyle='#b6d7d0';c.lineWidth=2;c.strokeRect(x,y,width,646);c.fillStyle='#eef7f5';c.fillRect(x+1,y+1,width-2,171);
       text(entry.options.length===2?'PHƯƠNG ÁN '+(i+1):'KHOẢN CÒN LẠI',x+width/2,y+24,22,muted,'700','center');
-      text(o.label,x+width/2,y+65,34,teal,'700','center',width-30);
-      text(money(o.amount),x+width/2,y+116,40,ink,'700','center',width-30);
+      text(entry.options.length===2?(i===0?'CHỈ NỘP BHYT':'NỘP BHYT + BHTT'):o.label,x+width/2,y+65,34,teal,'700','center',width-30);
+      text(money(o.amount),x+width/2,y+111,40,ink,'700','center',width-30);
+      text(entry.options.length===2?(i===0?'Không tham gia BHTT trong lần nộp này':'Đã gồm BHYT · Không quét thêm QR bên trái'):'Chỉ gồm khoản chưa nộp hiển thị ở trên',x+width/2,y+157,20,ink,'400','center',width-26);
       const qr=insuranceQrCanvas(o.payload);c.drawImage(qr,Math.round(x+(width-qr.width)/2),y+190);
-      text(o.plan.remark,x+width/2,y+601,23,muted,'400','center',width-30);
+      text('Mã thanh toán: '+o.plan.remark,x+width/2,y+601,23,muted,'400','center',width-30);
     });
   }
-  const warning=entry.complete?'Cảm ơn quý phụ huynh đã hoàn thành.':entry.options.length===2?'CHỈ THANH TOÁN 01 TRONG 02 MÃ QR':'CHỈ THANH TOÁN KHOẢN CÒN LẠI';
+  const warning=entry.complete?'Cảm ơn quý phụ huynh đã hoàn thành.':entry.options.length===2?'CHỌN 1 PHƯƠNG ÁN · CHỈ QUÉT 1 MÃ QR':'CHỈ THANH TOÁN KHOẢN CÒN LẠI';
   c.fillStyle='#fff5d9';c.fillRect(62,1410,1116,92);c.fillStyle=gold;c.fillRect(62,1410,7,92);
   text(warning,620,1427,31,ink,'700','center',1070);
-  text(entry.complete?'Trạng thái theo báo cáo đã cập nhật tại trường.':'Không thanh toán lại nếu đã nộp. Không quét cả hai mã.',620,1470,23,ink,'400','center',1070);
+  text(entry.complete?'Trạng thái theo báo cáo đã cập nhật tại trường.':'QR gộp đã bao gồm BHYT. Đã nộp rồi: không dùng lại thông báo này.',620,1470,23,ink,'400','center',1070);
   if(!entry.complete){
     text('TK nhận: '+entry.config.accountNumber+' · BIN '+entry.config.bin,62,1523,24,ink);
     text(entry.config.accountName,62,1558,25,ink,'700');
