@@ -167,8 +167,8 @@
     .notice-qr-grid{display:grid;grid-template-columns:1fr;gap:8px}.notice-qr-grid.multi{grid-template-columns:repeat(2,minmax(0,1fr))}
     .notice-qr-simple{text-align:center}.notice-qr-simple img{display:block;width:225px;max-width:100%;height:auto;margin:0 auto}.notice-qr-simple small{display:block;margin-top:5px;color:#275b58;font-size:8px;font-weight:700}.notice-qr-grid.multi .notice-qr-simple img{width:155px}.notice-qr-grid.multi .notice-qr-simple small{font-size:7px}
     .notice-guide{background:#f8fbfa;border:1px solid #d9e6e3;border-radius:10px;padding:12px 14px;font-size:9px;line-height:1.45}.notice-guide h2{font-size:13px;margin:0 0 7px;color:#006B68}.notice-guide ol{margin:0 0 8px 18px;padding:0}.notice-guide li{margin:4px 0}.notice-deadline-box{display:flex;justify-content:space-between;gap:8px;align-items:center;background:#fff2f0;border:1px solid #f1d5d1;border-radius:8px;padding:7px 9px}.notice-deadline-box span{font-size:8px;color:#7b6b69;text-transform:uppercase;font-weight:700}.notice-deadline-box strong{font-size:10px;color:#b23b35}.notice-final-message{margin:8px 0 0;color:#536764;border-top:1px dashed #d7e2df;padding-top:7px}
-    .notice-footer-row{display:grid;grid-template-columns:1fr 310px;gap:18px;align-items:start;margin-top:12px}.notice-footer-note{font-size:7.5px;color:#86918f;padding-top:4px}.notice-signature-box{text-align:center;display:grid;justify-items:center;gap:4px}.notice-signature-box i{font-size:9px;color:#53625f}.notice-signature-box strong{font-size:10px;letter-spacing:.2px}.notice-signature-space{width:100%;height:74px}.notice-signature-box span{font-size:10px;font-weight:700;min-height:12px}
-    @media(max-width:600px){.notice-student-panel{grid-template-columns:1fr 1fr}.notice-payment-section{grid-template-columns:1fr}.notice-footer-row{grid-template-columns:1fr}.notice-signature-box{width:100%}}
+    .notice-footer-row{display:flex;justify-content:flex-end;align-items:flex-start;margin-top:12px}.notice-signature-box{width:310px;text-align:center;display:grid;justify-items:center;gap:4px}.notice-signature-box i{font-size:9px;color:#53625f}.notice-signature-box strong{font-size:10px;letter-spacing:.2px}.notice-signature-space{width:100%;height:74px}.notice-signature-box span{font-size:10px;font-weight:700;min-height:12px}
+    @media(max-width:600px){.notice-student-panel{grid-template-columns:1fr 1fr}.notice-payment-section{grid-template-columns:1fr}.notice-footer-row{justify-content:stretch}.notice-signature-box{width:100%}}
     .mobile-notice{max-width:390px;margin:auto;background:#f7fcfb;border:1px solid #d6e6e2;border-radius:22px;padding:14px;color:#17423f}.mobile-head{background:#e9f7f4;border-radius:14px;padding:14px}.mobile-head strong,.mobile-head span{display:block}.mobile-head strong{font-size:17px}.mobile-head span{font-size:12px;color:#687c79;margin-top:3px}.mobile-student{background:#fff;border-radius:14px;padding:15px;margin-top:9px}.mobile-total{background:#e0f5f2;border-radius:14px;padding:15px;margin-top:9px}.mobile-total span,.mobile-total strong,.mobile-total b{display:block}.mobile-total strong{font-size:30px;color:#006B68;margin:4px 0}.mobile-total b{font-size:10px;color:#b7423d}.mobile-items{background:#fff;border:1px solid #dbe8e5;border-radius:14px;padding:12px;margin:9px 0}.mobile-items>div{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #edf2f1;font-size:11px}.mobile-items>div:last-child{border-bottom:0}
     #noticePrintRoot{display:none}
     @media(max-width:850px){.notice-grid{grid-template-columns:1fr;grid-template-areas:"output" "filter"}.notice-card-output{position:static}.notice-preview{grid-template-columns:1fr 1fr}}
@@ -693,6 +693,58 @@
       const n = Number(String(value ?? '').replace(/[^0-9.-]/g,'')) || 0;
       return Math.round(n).toLocaleString('vi-VN') + ' ₫';
     }
+    function amountToVietnameseWords(value) {
+      let n=Math.round(Number(String(value ?? '').replace(/[^0-9.-]/g,''))||0);
+      if(n===0) return 'Không đồng';
+      if(n<0) return 'Âm '+amountToVietnameseWords(Math.abs(n)).toLocaleLowerCase('vi-VN');
+
+      const digit=['không','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
+      const scale=['','nghìn','triệu','tỷ','nghìn tỷ','triệu tỷ','tỷ tỷ'];
+
+      function readThree(num,full){
+        const hundred=Math.floor(num/100);
+        const ten=Math.floor((num%100)/10);
+        const unit=num%10;
+        const out=[];
+
+        if(hundred>0){
+          out.push(digit[hundred],'trăm');
+        }else if(full && (ten>0||unit>0)){
+          out.push('không','trăm');
+        }
+
+        if(ten>1){
+          out.push(digit[ten],'mươi');
+          if(unit===1) out.push('mốt');
+          else if(unit===4) out.push('tư');
+          else if(unit===5) out.push('lăm');
+          else if(unit>0) out.push(digit[unit]);
+        }else if(ten===1){
+          out.push('mười');
+          if(unit===5) out.push('lăm');
+          else if(unit>0) out.push(digit[unit]);
+        }else if(unit>0){
+          if(hundred>0||full) out.push('lẻ');
+          out.push(digit[unit]);
+        }
+        return out.join(' ');
+      }
+
+      const groups=[];
+      while(n>0){groups.push(n%1000);n=Math.floor(n/1000);}
+      let highest=groups.length-1;
+      const parts=[];
+      for(let i=highest;i>=0;i--){
+        const group=groups[i];
+        if(group===0) continue;
+        const full=i<highest && group<100;
+        const text=readThree(group,full);
+        if(text) parts.push(text+(scale[i]?' '+scale[i]:''));
+      }
+      let result=parts.join(' ').replace(/s+/g,' ').trim();
+      result=result.charAt(0).toLocaleUpperCase('vi-VN')+result.slice(1);
+      return result+' đồng';
+    }
     function normalizeText(value) {
       return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
     }
@@ -824,7 +876,7 @@
             <thead><tr><th>STT</th><th>Nội dung khoản thu</th><th>Số tiền</th></tr></thead>
             <tbody>${rows}<tr class="notice-total"><td colspan="2">TỔNG SỐ TIỀN PHẢI NỘP</td><td>${moneyNotice(entry.total)}</td></tr></tbody>
           </table>
-          <div class="notice-amount-words"><span>Bằng chữ:</span><strong>${escapeHtmlNotice(typeof receiptAmountWords==='function'?receiptAmountWords(entry.total):moneyNotice(entry.total))}</strong></div>
+          <div class="notice-amount-words"><span>Bằng chữ:</span><strong>${escapeHtmlNotice(amountToVietnameseWords(entry.total))}</strong></div>
         </section>
 
         <section class="notice-payment-section">
@@ -845,7 +897,6 @@
         </section>
 
         <section class="notice-footer-row">
-          <div class="notice-footer-note">Thông báo được tạo từ dữ liệu khoản thu của nhà trường.</div>
           <div class="notice-signature-box">
             <i>Hiếu Giang, ngày ${new Intl.DateTimeFormat('vi-VN').format(new Date())}</i>
             <strong>HIỆU TRƯỞNG</strong>
