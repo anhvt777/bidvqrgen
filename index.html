@@ -340,6 +340,24 @@
     document.getElementById('search').addEventListener('input', filterQR, false);
     document.getElementById('classSelect').addEventListener('change', updateClassExportButton, false);
     document.getElementById('downloadClass').addEventListener('click', downloadSelectedClass, false);
+    document.getElementById('qrModeTab').addEventListener('click', () => setMode('qr'));
+    document.getElementById('noticeModeTab').addEventListener('click', () => setMode('notice'));
+    document.getElementById('noticeClass').addEventListener('change', refreshNoticeSelectors);
+    document.getElementById('noticeStudent').addEventListener('change', updateNoticeStats);
+    document.getElementById('noticeQrMode').addEventListener('change', updateNoticeStats);
+    document.getElementById('noticeDeadline').addEventListener('change', updateNoticeStats);
+    document.getElementById('noticeFees').addEventListener('change', event => {
+      const values=[...event.currentTarget.selectedOptions].map(o=>o.value);
+      if(values.length>1 && values.includes('all')) event.currentTarget.querySelector('option[value="all"]').selected=false;
+      updateNoticeStats();
+    });
+    document.querySelectorAll('input[name="noticeTemplate"]').forEach(radio=>radio.addEventListener('change',()=>{
+      document.querySelectorAll('.template-option').forEach(label=>label.classList.toggle('selected',label.querySelector('input').checked));
+      if(window.noticeEntries) renderNoticePreview(window.noticeEntries);
+    }));
+    document.getElementById('previewNotices').addEventListener('click',()=>previewNotices().catch(error=>alert(error.message||error)));
+    document.getElementById('printNotices').addEventListener('click',()=>printNotices().catch(error=>alert(error.message||error)));
+    document.getElementById('downloadNoticeImages').addEventListener('click',()=>downloadNoticeImages().catch(error=>alert(error.message||error)));
 
     function normalizeHeader(value) {
       return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
