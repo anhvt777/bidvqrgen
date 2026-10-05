@@ -183,6 +183,7 @@
     }
 
   </style>
+<link rel="stylesheet" href="insurance.css">
 </head>
 <body>
   <header>
@@ -197,6 +198,7 @@
     <div class="mode-tabs" role="tablist" aria-label="Chọn chức năng">
       <button class="mode-tab active" id="qrModeTab" type="button">▦ Tạo QR</button>
       <button class="mode-tab" id="noticeModeTab" type="button">✉ Thông báo nộp tiền</button>
+      <button class="mode-tab" id="insuranceModeTab" type="button">▦ QR Bảo hiểm · 2 phương án</button>
     </div>
     <div class="mode-help" id="modeHelp">Tải file Excel một lần, sau đó thao tác Thông báo nộp tiền ở phía trên; danh sách QR chi tiết hiển thị phía dưới.</div>
     <div id="controls">
@@ -265,7 +267,20 @@
       </article>
     </section>
 
-    <div id="qrs"></div>
+    <section id="insuranceTool" hidden>
+<div class="bi-layout"><article class="bi-card">
+<h2>QR Bảo hiểm · 2 phương án</h2><p>Chọn tên trường và logo ở phía trên. Mỗi phụ huynh chỉ chọn một QR: BHYT hoặc BHYT + BHTT.</p>
+<h3>1. Danh sách bảo hiểm</h3><label>Nạp Excel / CSV (mỗi học sinh một dòng)<input id="biFile" type="file" accept=".xlsx,.xls,.csv"></label><button id="biTemplate">Tải file mẫu CSV</button><button id="biExisting">Lấy danh sách đã nhập ở tab QR</button>
+<div id="biSourceChoices" hidden><label>Khoản BHYT<select id="biHealthFee"></select></label><label>Khoản BHTT<select id="biBodyFee"></select></label><button id="biUseFees">Ghép hai khoản theo mã học sinh</button></div>
+<div id="biMapping" hidden></div><p id="biDataStatus" role="status">Chưa có dữ liệu. Dữ liệu học sinh chỉ giữ trong phiên đang mở.</p>
+<h3>2. Tài khoản nhận chung của trường</h3><p class="bi-note">Hai QR chuyển vào tài khoản dưới đây. Không cộng tiền vào tài khoản định danh riêng của một khoản. Nếu dùng dịch vụ thu hộ theo hóa đơn, cần đăng ký phương án gộp với ngân hàng trước.</p>
+<label>Mã BIN ngân hàng<input id="biBin" value="970418" maxlength="6"></label><label>Số tài khoản nhận<input id="biAccount" maxlength="19" autocomplete="off"></label><label>Tên chủ tài khoản<input id="biAccountName" maxlength="60"></label>
+<label>Năm học / Đợt thu<input id="biYear" placeholder="2026–2027 / Đợt 1" maxlength="60"></label><label>Hạn nộp<input id="biDeadline" type="date"></label><label>Liên hệ của trường<input id="biContact" maxlength="100"></label><button id="biSave">Lưu cấu hình cho trường này</button>
+<h3>3. Chọn lớp và xuất</h3><label>Lớp (Ctrl/Cmd để chọn nhiều)<select id="biClasses" multiple size="5"><option value="all" selected>Tất cả lớp</option></select></label><label>Trạng thái<select id="biStatus"><option value="unpaid">Còn khoản chưa nộp</option><option value="all">Tất cả, gồm thông báo đã hoàn thành</option></select></label>
+<div class="bi-actions"><button id="biPreview">Xem trước</button><button id="biExport">Xuất ZIP ảnh + PDF theo lớp</button><button id="biCancel" hidden>Hủy xuất</button></div><p id="biProgress" role="status" aria-live="polite"></p>
+<p class="bi-note">Cập nhật cột Đã nộp BHYT / Đã nộp BHTT trước mỗi lần nhắc thu. Web này không tự nhận báo cáo ngân hàng và không khóa được ảnh QR đã gửi. ZIP có bảng mã để đối chiếu; giữ bảng mã cùng đợt phát hành.</p>
+</article><article class="bi-card"><h3>Mẫu A5 dọc · Hai lựa chọn thanh toán</h3><div class="bi-pager"><button id="biPrev" disabled>‹ Trước</button><span id="biPage">Chưa có thông báo</span><button id="biNext" disabled>Sau ›</button></div><div id="biCanvas"><p>Chọn dữ liệu và bấm Xem trước.</p></div></article></div></section>
+<div id="qrs"></div>
 
     
     <div id="noticePrintRoot" aria-hidden="true"></div>
@@ -1031,12 +1046,12 @@
       document.getElementById('noticeQrStatus').textContent=entries.length+' ảnh đã xuất';
     }
     function setMode(mode) {
-      const notice=mode==='notice';document.getElementById('noticeTool').hidden=!notice;document.getElementById('qrs').hidden=notice;
-      document.getElementById('qrModeTab').classList.toggle('active',!notice);document.getElementById('noticeModeTab').classList.toggle('active',notice);
-      document.getElementById('search').style.display=notice?'none':'';document.getElementById('classExport').style.display=notice?'none':(document.getElementById('classSelect').options.length>1?'flex':'none');
-      document.getElementById('downloadAll').style.display=notice?'none':(allData.length?'inline-block':'none');
+      const notice=mode==='notice',insurance=mode==='insurance';document.getElementById('insuranceTool').hidden=!insurance;document.getElementById('noticeTool').hidden=!notice;document.getElementById('qrs').hidden=notice||insurance;document.getElementById('insuranceModeTab').classList.toggle('active',insurance);
+      document.getElementById('qrModeTab').classList.toggle('active',!notice&&!insurance);document.getElementById('noticeModeTab').classList.toggle('active',notice);
+      document.getElementById('search').style.display=(notice||insurance)?'none':'';document.getElementById('classExport').style.display=(notice||insurance)?'none':(document.getElementById('classSelect').options.length>1?'flex':'none');
+      document.getElementById('downloadAll').style.display=(notice||insurance)?'none':(allData.length?'inline-block':'none');
       document.getElementById('modeHelp').textContent=notice?'Chọn lớp, học sinh, khoản thu và hạn nộp; web dùng trực tiếp tài khoản trong file Excel để tạo thông báo.':'Tải file Excel một lần để tạo QR theo từng dòng hoặc xuất thông báo khoản thu hàng loạt.';
-      if(notice)refreshNoticeSelectors();
+      if(notice)refreshNoticeSelectors();if(insurance)document.getElementById('modeHelp').textContent='Chọn trường, nạp dữ liệu bảo hiểm và cấu hình tài khoản nhận. Dữ liệu thu không tự đồng bộ từ website trường.';
     }
 
     function safePathSegment(value) {
@@ -1169,5 +1184,7 @@
       return new Blob([u8arr], { type: mime });
     }
   </script>
+<script src="vendor/qrcode.min.js"></script>
+<script src="insurance.js"></script>
 </body>
 </html>
