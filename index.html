@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PGD ĐƯỜNG 9 - BIDV QUẢNG TRỊ: QR thu hộ</title>
+  <title>BIDV - QR thu hộ trường học</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -387,7 +387,8 @@
         Bank:pick(['bank','ngan hang'],1),
         BankBin:pick(['bankbin','bank bin','ma bin','bin'],2),
         Amount:pick(['amount','so tien','so tien nop','so tien phai nop'],3),
-        AccountName:pick(['accountname','account name','ho ten','ten hoc sinh','ten khach hang'],4),
+        StudentName:pick(['ho va ten hoc sinh','ho ten hoc sinh','ten hoc sinh','ho va ten','ho ten','student name','fullname','full name'],-1),
+        AccountName:pick(['accountname','account name','ten tai khoan','ten khach hang','account holder'],4),
         Remark:pick(['remark','noi dung','noi dung chuyen khoan','noi dung thanh toan'],5),
         Class:pick(['class','lop','khoi lop'],6),
         StudentID:pick(['studentid','student id','ma hoc sinh','ma hs','ma moet'],7),
@@ -416,7 +417,7 @@
         for (let i = headerIndex + 1; i < rows.length; i++) {
           const row=rows[i]||[];
           const AccountNumber=rowValue(row,map.AccountNumber), Bank=rowValue(row,map.Bank), BankBin=rowValue(row,map.BankBin), Amount=rowValue(row,map.Amount);
-          const AccountName=rowValue(row,map.AccountName), Remark=rowValue(row,map.Remark), Class=rowValue(row,map.Class), StudentID=rowValue(row,map.StudentID);
+          const StudentName=rowValue(row,map.StudentName), AccountName=rowValue(row,map.AccountName), Remark=rowValue(row,map.Remark), Class=rowValue(row,map.Class), StudentID=rowValue(row,map.StudentID);
           const FeeName=rowValue(row,map.FeeName), BirthDate=rowValue(row,map.BirthDate), ParentName=rowValue(row,map.ParentName);
           if (!AccountNumber || !BankBin) continue;
 
@@ -426,7 +427,7 @@
           const item = {
             url: qrUrl,
             filename: "",
-            AccountNumber, Bank, BankBin, Amount, AccountName, DisplayName: displayName, Remark, Class, StudentID,
+            AccountNumber, Bank, BankBin, Amount, AccountName, StudentName: String(StudentName||'').trim(), DisplayName: displayName, Remark, Class, StudentID,
             FeeName: String(FeeName||'').trim() || String(Remark||'').trim() || 'Khoản thu',
             BirthDate: String(BirthDate||'').trim(), ParentName: String(ParentName||'').trim(),
             schoolLogoData: currentSchoolLogo()
@@ -849,14 +850,15 @@
     }
 
     function studentNameOnly(item) {
+      const explicitName = String(item.StudentName || '').trim();
+      if (explicitName) return explicitName.normalize('NFC');
       const fullName = String(item.DisplayName || item.AccountName || '').trim();
       const className = String(item.Class || '').trim();
       if (className && fullName.slice(-className.length).toLocaleUpperCase() === className.toLocaleUpperCase()) {
-        return fullName.slice(0, -className.length).replace(/[\s_-]+$/g, '').trim();
+        return fullName.slice(0, -className.length).replace(/[\s_-]+$/g, '').trim().normalize('NFC');
       }
-      return fullName;
+      return fullName.normalize('NFC');
     }
-
     function assignExportFilenames(items) {
       const used = new Map();
       items.forEach((item, index) => {
