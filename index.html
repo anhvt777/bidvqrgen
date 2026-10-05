@@ -128,7 +128,7 @@
     .mode-tab{border:1px solid #cfd9d7;background:#fff;color:#006B68;padding:10px 16px;border-radius:9px;font-weight:700;cursor:pointer}
     .mode-tab.active{background:#006B68;color:#fff}
     .mode-help{font-size:13px;color:#65706f;margin-bottom:14px}
-    .notice-tool{margin-top:18px}
+    .notice-tool{margin-top:10px;margin-bottom:18px}.notice-tool + #qrs{margin-top:22px;padding-top:18px;border-top:2px solid #dbe8e5}
     .notice-grid{display:grid;grid-template-columns:minmax(320px,.78fr) minmax(540px,1.22fr);grid-template-areas:"output filter";gap:16px;align-items:start}.notice-card-output{grid-area:output;position:sticky;top:12px;z-index:3}.notice-card-filter{grid-area:filter}
     .notice-card{background:#fff;border:1px solid #d8e1df;border-radius:14px;padding:16px;box-shadow:0 2px 7px rgba(0,0,0,.05)}
     .notice-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
@@ -186,7 +186,7 @@
       <button class="mode-tab active" id="qrModeTab" type="button">▦ Tạo QR</button>
       <button class="mode-tab" id="noticeModeTab" type="button">✉ Thông báo nộp tiền</button>
     </div>
-    <div class="mode-help" id="modeHelp">Tải file Excel một lần để tạo QR theo từng dòng hoặc xuất thông báo khoản thu hàng loạt.</div>
+    <div class="mode-help" id="modeHelp">Tải file Excel một lần, sau đó thao tác Thông báo nộp tiền ở phía trên; danh sách QR chi tiết hiển thị phía dưới.</div>
     <div id="controls">
       <input type="file" id="upload" accept=".xlsx,.xls" />
       <label>Tên trường <input id="schoolName" type="text" placeholder="Nhập tên trường để lưu logo riêng" /></label>
@@ -202,8 +202,6 @@
       </div>
       <button id="downloadAll" style="display:none;">⬇ Tải tất cả QR (ZIP)</button>
     </div>
-
-    <div id="qrs"></div>
 
     <section id="noticeTool" class="notice-tool" hidden>
       <div class="notice-grid">
@@ -253,6 +251,10 @@
         <div id="noticePreview" class="notice-preview"><div class="notice-empty">Chưa có thông báo được tạo.</div></div>
       </article>
     </section>
+
+    <div id="qrs"></div>
+
+    
     <div id="noticePrintRoot" aria-hidden="true"></div>
   </main>
 
