@@ -129,7 +129,7 @@
     .mode-tab.active{background:#006B68;color:#fff}
     .mode-help{font-size:13px;color:#65706f;margin-bottom:14px}
     .notice-tool{margin-top:18px}
-    .notice-grid{display:grid;grid-template-columns:minmax(520px,1.2fr) minmax(320px,.8fr);gap:16px}
+    .notice-grid{display:grid;grid-template-columns:minmax(320px,.78fr) minmax(540px,1.22fr);grid-template-areas:"output filter";gap:16px;align-items:start}.notice-card-output{grid-area:output;position:sticky;top:12px;z-index:3}.notice-card-filter{grid-area:filter}
     .notice-card{background:#fff;border:1px solid #d8e1df;border-radius:14px;padding:16px;box-shadow:0 2px 7px rgba(0,0,0,.05)}
     .notice-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
     .notice-card-head div{display:grid;gap:3px}.notice-card-head b{font-size:16px;color:#163b39}.notice-card-head small{font-size:12px;color:#758482}
@@ -153,20 +153,20 @@
     .notice-a4 h1{text-align:center;font-size:24px;color:#006B68;margin:22px 0}.notice-student-box{display:grid;grid-template-columns:1.7fr 1fr .7fr 1.2fr;border:1px solid #d7e7e3;border-radius:9px;overflow:hidden;background:#f5fbf9}.notice-student-box>div{padding:9px;border-right:1px solid #d7e7e3}.notice-student-box>div:last-child{border-right:0}.notice-student-box span,.notice-student-box strong{display:block}.notice-student-box span{font-size:9px;color:#748582}.notice-student-box strong{font-size:11px}
     .notice-a4 table{width:100%;border-collapse:collapse;margin-top:14px;font-size:11px}.notice-a4 th,.notice-a4 td{border:1px solid #cfdfdc;padding:7px}.notice-a4 th{background:#e9f5f2}.notice-a4 td:last-child,.notice-a4 th:last-child{text-align:right}.notice-total td{font-weight:700;background:#e4f5f1}.notice-total td:last-child{background:#006B68;color:#fff;font-size:15px}
     .notice-pay-grid{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:center;margin-top:14px;border-top:2px solid #e3efec;padding-top:12px}
-    .notice-qr-grid{display:grid;grid-template-columns:1fr;gap:10px}.notice-qr-grid.multi{grid-template-columns:repeat(2,minmax(0,1fr))}.notice-qr-grid.multi .branded-qr img{width:145px;height:auto;max-height:190px}.notice-qr-grid.multi .brands b{font-size:15px}.notice-qr-grid.multi .brands strong{font-size:18px}.notice-qr-grid.multi .brands em{font-size:15px}.notice-qr-grid.multi .branded-qr small{font-size:8px}
+    .notice-qr-grid{display:grid;grid-template-columns:1fr;gap:10px}.notice-qr-grid.multi{grid-template-columns:repeat(2,minmax(0,1fr))}.notice-qr-simple{text-align:center}.notice-qr-simple img{display:block;width:245px;max-width:100%;height:auto;margin:0 auto}.notice-qr-simple small{display:block;margin-top:6px;color:#275b58;font-size:9px;font-weight:700}.notice-qr-grid.multi .notice-qr-simple img{width:175px}.notice-qr-grid.multi .notice-qr-simple small{font-size:8px}
     .notice-guide{background:#f8fbfa;border:1px solid #d9e6e3;border-radius:10px;padding:12px;font-size:10px;line-height:1.5}.notice-guide h2{font-size:14px;margin:0 0 8px;color:#006B68}.notice-deadline{color:#b23b35;background:#fff0ee;border-radius:6px;padding:4px 6px}
     .notice-sign{display:grid;grid-template-columns:1fr 1fr;text-align:center;margin-top:20px}.notice-sign>div:last-child{display:grid;gap:7px}.notice-sign span{margin-top:32px;font-weight:700}
     .branded-qr{text-align:center}.branded-qr .flower{font-size:28px;color:#FFC62F;line-height:1;margin-bottom:5px}.branded-qr .qrbox{position:relative;display:inline-block;padding:5px;border:2px solid #274e75;background:#fff}.branded-qr img{display:block;width:210px;height:auto;max-height:275px}.branded-qr .vmark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:27px;height:27px;display:grid;place-items:center;background:#fff;border-radius:4px;color:#e72a3b;font:bold 23px Arial}.brands{display:flex;align-items:center;justify-content:center;gap:11px;margin-top:6px}.brands b{font:italic 700 20px Arial;color:#245487}.brands b span{color:#26a7df}.brands i{width:1px;height:24px;background:#8b9896}.brands strong{font:700 24px Arial;color:#006B68}.brands em{font-style:normal;color:#FFC62F;font-size:19px}
     .mobile-notice{max-width:390px;margin:auto;background:#f7fcfb;border:1px solid #d6e6e2;border-radius:22px;padding:14px;color:#17423f}.mobile-head{background:#e9f7f4;border-radius:14px;padding:14px}.mobile-head strong,.mobile-head span{display:block}.mobile-head strong{font-size:17px}.mobile-head span{font-size:12px;color:#687c79;margin-top:3px}.mobile-student{background:#fff;border-radius:14px;padding:15px;margin-top:9px}.mobile-total{background:#e0f5f2;border-radius:14px;padding:15px;margin-top:9px}.mobile-total span,.mobile-total strong,.mobile-total b{display:block}.mobile-total strong{font-size:30px;color:#006B68;margin:4px 0}.mobile-total b{font-size:10px;color:#b7423d}.mobile-items{background:#fff;border:1px solid #dbe8e5;border-radius:14px;padding:12px;margin:9px 0}.mobile-items>div{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #edf2f1;font-size:11px}.mobile-items>div:last-child{border-bottom:0}
     #noticePrintRoot{display:none}
-    @media(max-width:850px){.notice-grid{grid-template-columns:1fr}.notice-preview{grid-template-columns:1fr 1fr}}
+    @media(max-width:850px){.notice-grid{grid-template-columns:1fr;grid-template-areas:"output" "filter"}.notice-card-output{position:static}.notice-preview{grid-template-columns:1fr 1fr}}
     @media(max-width:600px){.notice-fields{grid-template-columns:1fr}.notice-wide{grid-column:auto}.notice-stats{grid-template-columns:1fr}.notice-preview{grid-template-columns:1fr}.notice-pay-grid{grid-template-columns:1fr}.notice-student-box{grid-template-columns:1fr 1fr}}
     @media print{
       body.printing-notices header,body.printing-notices main> :not(#noticePrintRoot){display:none!important}
       body.printing-notices #noticePrintRoot{display:block!important}
       body.printing-notices .notice-a4{width:190mm;min-height:277mm;box-sizing:border-box;border:0;padding:10mm 12mm;margin:0 auto;page-break-after:always}
       body.printing-notices .notice-a4:last-child{page-break-after:auto}
-      body.printing-notices .branded-qr img{width:52mm;height:auto;max-height:68mm}
+      body.printing-notices .notice-qr-simple img{width:58mm;height:auto;max-height:76mm}
       @page{size:A4 portrait;margin:6mm}
     }
 
@@ -207,9 +207,23 @@
 
     <section id="noticeTool" class="notice-tool" hidden>
       <div class="notice-grid">
-        <article class="notice-card">
+        <article class="notice-card notice-card-output">
           <div class="notice-card-head">
-            <div><b>1. Chọn đối tượng & khoản thu</b><small>Dữ liệu lấy trực tiếp từ file Excel đã tải.</small></div>
+            <div><b>1. Xuất thông báo</b><small>Chọn mẫu và xuất nhanh sau khi thiết lập đối tượng bên dưới.</small></div>
+          </div>
+          <label class="template-option selected"><input type="radio" name="noticeTemplate" value="a4" checked><span><b>Mẫu A4 chuẩn</b><small>In/PDF, mỗi học sinh một trang.</small></span><em>A4</em></label>
+          <label class="template-option"><input type="radio" name="noticeTemplate" value="mobile"><span><b>Mẫu ảnh điện thoại</b><small>Gọn, QR lớn, gửi Zalo/Messenger.</small></span><em>9:16</em></label>
+          <div class="notice-actions">
+            <button id="previewNotices" type="button">Xem trước</button>
+            <button id="printNotices" type="button">🖨 In / Lưu PDF A4</button>
+            <button id="downloadNoticeImages" type="button">⬇ Xuất ZIP ảnh PNG</button>
+          </div>
+          <div class="notice-note"><b>QR thanh toán:</b> sử dụng chính BankBin, AccountNumber và AccountName từ file Excel. Không cần cấu hình lại tài khoản nhận tiền.</div>
+        </article>
+
+        <article class="notice-card notice-card-filter">
+          <div class="notice-card-head">
+            <div><b>2. Chọn đối tượng & khoản thu</b><small>Dữ liệu lấy trực tiếp từ file Excel đã tải.</small></div>
             <span>BIDV QR</span>
           </div>
           <div class="notice-fields">
@@ -221,7 +235,7 @@
             <label>Cách tạo QR<select id="noticeQrMode"><option value="auto">Tự động: gộp khi cùng tài khoản</option><option value="separate">QR riêng cho từng khoản</option><option value="single">1 QR tổng (chỉ khi cùng tài khoản)</option></select></label>
             <label class="notice-wide">Khoản cần thông báo
               <select id="noticeFees" multiple size="7"><option value="all" selected>Tất cả khoản phù hợp</option></select>
-              <small>Giữ Ctrl/Cmd để chọn nhiều khoản. Nếu file chưa có cột “Khoản thu”, web dùng Remark làm tên khoản.</small>
+              <small>Danh sách này chỉ hiển thị các khoản thuộc lớp/học sinh đang chọn. Giữ Ctrl/Cmd để chọn nhiều khoản.</small>
             </label>
             <label class="notice-wide">Lời nhắn cuối thông báo
               <textarea id="noticeMessage" rows="3">Nếu phụ huynh đã thanh toán, vui lòng bỏ qua thông báo này.</textarea>
@@ -232,20 +246,6 @@
             <div><span>Số khoản</span><strong id="noticeFeeCount">0</strong></div>
             <div><span>Tổng tiền</span><strong id="noticeGrandTotal">0 ₫</strong></div>
           </div>
-        </article>
-
-        <article class="notice-card">
-          <div class="notice-card-head">
-            <div><b>2. Chọn đầu ra</b><small>Cùng dữ liệu, cùng QR thanh toán.</small></div>
-          </div>
-          <label class="template-option selected"><input type="radio" name="noticeTemplate" value="a4" checked><span><b>Mẫu A4 chuẩn</b><small>In/PDF, mỗi học sinh một trang.</small></span><em>A4</em></label>
-          <label class="template-option"><input type="radio" name="noticeTemplate" value="mobile"><span><b>Mẫu ảnh điện thoại</b><small>Gọn, QR lớn, gửi Zalo/Messenger.</small></span><em>9:16</em></label>
-          <div class="notice-actions">
-            <button id="previewNotices" type="button">Xem trước</button>
-            <button id="printNotices" type="button">🖨 In / Lưu PDF A4</button>
-            <button id="downloadNoticeImages" type="button">⬇ Xuất ZIP ảnh PNG</button>
-          </div>
-          <div class="notice-note"><b>QR thanh toán:</b> sử dụng chính BankBin, AccountNumber và AccountName từ file Excel. Không cần cấu hình lại tài khoản nhận tiền.</div>
         </article>
       </div>
       <article class="notice-card notice-preview-card">
@@ -344,7 +344,7 @@
     document.getElementById('qrModeTab').addEventListener('click', () => setMode('qr'));
     document.getElementById('noticeModeTab').addEventListener('click', () => setMode('notice'));
     document.getElementById('noticeClass').addEventListener('change', refreshNoticeSelectors);
-    document.getElementById('noticeStudent').addEventListener('change', updateNoticeStats);
+    document.getElementById('noticeStudent').addEventListener('change', refreshNoticeSelectors);
     document.getElementById('noticeQrMode').addEventListener('change', updateNoticeStats);
     document.getElementById('noticeDeadline').addEventListener('change', updateNoticeStats);
     document.getElementById('noticeFees').addEventListener('change', event => {
@@ -706,10 +706,12 @@
       studentEl.innerHTML='<option value="all">Tất cả học sinh trong phạm vi</option>'+students.map(([key,item])=>'<option value="'+escapeHtmlNotice(key)+'">'+escapeHtmlNotice((item.Class||'')+' · '+studentNameOnly(item)+' · '+(item.StudentID||''))+'</option>').join('');
       studentEl.value=students.some(([k])=>k===oldStudent)?oldStudent:'all';
 
+      const selectedStudentKey=studentEl.value||'all';
+      const feeSource=scopedItems.filter(item=>selectedStudentKey==='all'||noticeStudentKey(item)===selectedStudentKey);
       const feeMap=new Map();
-      allData.forEach(item=>{const key=noticeFeeKey(item);if(!feeMap.has(key))feeMap.set(key,item);});
-      feeEl.innerHTML='<option value="all">Tất cả khoản phù hợp</option>'+[...feeMap.entries()].sort((a,b)=>String(a[1].FeeName||'').localeCompare(String(b[1].FeeName||''),'vi')).map(([key,item])=>'<option value="'+escapeHtmlNotice(key)+'">'+escapeHtmlNotice(item.FeeName||item.Remark||'Khoản thu')+'</option>').join('');
-      const kept=[...feeEl.options].filter(o=>selected.has(o.value));
+      feeSource.forEach(item=>{const key=noticeFeeKey(item);if(!feeMap.has(key))feeMap.set(key,item);});
+      feeEl.innerHTML='<option value="all">Tất cả khoản của phạm vi đang chọn</option>'+[...feeMap.entries()].sort((a,b)=>String(a[1].FeeName||'').localeCompare(String(b[1].FeeName||''),'vi')).map(([key,item])=>'<option value="'+escapeHtmlNotice(key)+'">'+escapeHtmlNotice(item.FeeName||item.Remark||'Khoản thu')+'</option>').join('');
+      const kept=[...feeEl.options].filter(o=>selected.has(o.value)&&o.value!=='all');
       if(kept.length)kept.forEach(o=>o.selected=true);else feeEl.options[0].selected=true;
 
       if(!document.getElementById('noticeDeadline').value){const d=new Date();d.setDate(d.getDate()+10);document.getElementById('noticeDeadline').value=d.toISOString().slice(0,10);}
@@ -771,7 +773,7 @@
       return entries;
     }
     function noticeQrHtml(qr) {
-      return '<div class="branded-qr"><div class="flower">✿</div><div class="qrbox"><img src="'+qr.imageData+'" alt="QR thanh toán"></div><div class="brands"><b>napas<span>247</span></b><i></i><strong>BIDV</strong><em>✿</em></div><small>'+escapeHtmlNotice(qr.FeeName||'Thanh toán')+' · '+moneyNotice(qr.Amount)+'</small></div>';
+      return '<div class="notice-qr-simple"><img src="'+qr.imageData+'" alt="QR thanh toán"><small>'+escapeHtmlNotice(qr.FeeName||'Thanh toán')+' · '+moneyNotice(qr.Amount)+'</small></div>';
     }
     function noticeA4Html(entry) {
       const rows=entry.items.map((item,i)=>'<tr><td>'+(i+1)+'</td><td>'+escapeHtmlNotice(item.FeeName||item.Remark||'Khoản thu')+'</td><td>'+moneyNotice(item.Amount)+'</td></tr>').join('');
