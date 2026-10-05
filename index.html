@@ -1046,6 +1046,7 @@
       document.getElementById('noticeQrStatus').textContent=entries.length+' ảnh đã xuất';
     }
     function setMode(mode) {
+      history.replaceState(null,'',location.pathname+location.search+(mode==='insurance'?'#bao-hiem':''));
       const notice=mode==='notice',insurance=mode==='insurance';document.getElementById('insuranceTool').hidden=!insurance;document.getElementById('noticeTool').hidden=!notice;document.getElementById('qrs').hidden=notice||insurance;document.getElementById('insuranceModeTab').classList.toggle('active',insurance);
       document.getElementById('qrModeTab').classList.toggle('active',!notice&&!insurance);document.getElementById('noticeModeTab').classList.toggle('active',notice);
       document.getElementById('search').style.display=(notice||insurance)?'none':'';document.getElementById('classExport').style.display=(notice||insurance)?'none':(document.getElementById('classSelect').options.length>1?'flex':'none');
