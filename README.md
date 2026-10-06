@@ -8,18 +8,22 @@ Mỗi dòng nguồn là một QR đã có định danh, số tiền và tài kho
 
 Bấm **Tải mẫu Excel mới** trong tab để lấy mẫu có hướng dẫn. Ví dụ trong file là dữ liệu giả, phải thay bằng thông tin đã đăng ký trước khi phát hành.
 
-Cột bắt buộc: StudentID (mã học sinh gốc), StudentName, Class, CustomerCode (mã thu duy nhất), FeeName (tên lựa chọn), Amount (số tiền của QR), AccountNumber, BankBin, AccountName.
+Cột bắt buộc: StudentID (mã học sinh gốc), StudentName, Class, FeeName (tên lựa chọn), Amount (số tiền của QR), AccountNumber, BankBin, AccountName.
 
-Cột mở rộng: Remark (trống dùng CustomerCode), ChoiceGroup (trống dùng DOT_THU), Includes (khoản bao gồm), ChoiceNote (giải thích), ChoiceOrder (thứ tự). Các trường mã và tài khoản cần đặt dạng Text trong Excel để giữ số 0 đầu. Remark cần 1–25 ký tự không dấu gồm chữ, số, khoảng trắng, `_ . -`; không tự cắt hoặc thay nội dung nguồn.
+Cột mở rộng: CustomerCode (trống dùng AccountNumber làm định danh); Remark (trống dùng mã thu / tài khoản định danh), ChoiceGroup (trống dùng DOT_THU), Includes (khoản bao gồm), ChoiceNote (giải thích), ChoiceOrder (thứ tự). Các trường mã và tài khoản cần đặt dạng Text trong Excel để giữ số 0 đầu. Remark cần 1–95 ký tự không dấu gồm chữ, số, khoảng trắng, `_ . -`; không tự cắt hoặc thay nội dung nguồn.
 
 Gom theo StudentID + ChoiceGroup. Một học sinh có thể có nhiều nhóm độc lập; trong mỗi nhóm chỉ chọn một QR. Họ tên/lớp của cùng StudentID phải thống nhất. Mã thu không trùng trong file. Hai lựa chọn cùng ngân hàng, tài khoản và nội dung sẽ bị chặn vì không phân biệt được thông tin QR. Lựa chọn bị thiếu dòng chỉ còn một QR sẽ có cảnh báo.
 
 Ảnh A5 có tối đa hai QR/trang; nhóm nhiều lựa chọn có nhiều trang với số trang và lời nhắc chọn một QR trong toàn nhóm. ZIP theo lớp chứa PNG, PDF cả lớp và CSV đối chiếu đúng thông tin từng lựa chọn.
 
-Nạp riêng tại tab này sẽ nhận diện và cho ghép cột. Nạp ở tab Tạo QR rồi dùng lại cũng hỗ trợ các cột mở rộng; mã thu có thể lấy Remark của dữ liệu cũ nếu CustomerCode chưa có. Với dữ liệu cần giữ mã dạng Text, ưu tiên nạp riêng tại tab lựa chọn.
+Nạp riêng tại tab này sẽ nhận diện và cho ghép cột. Nạp ở tab Tạo QR rồi dùng lại cũng hỗ trợ các cột mở rộng; mã thu lấy AccountNumber của dữ liệu cũ nếu CustomerCode chưa có. Với dữ liệu cần giữ mã dạng Text, ưu tiên nạp riêng tại tab lựa chọn.
 
 Web tạo QR chuyển khoản từ file; không đăng ký khoản định danh ở ngân hàng, không cập nhật trạng thái thu, không tự khóa mã lựa chọn còn lại. Includes là mô tả, không phải sổ phân bổ kế toán. Không đặt số tiền gộp vào tài khoản định danh dành riêng cho khoản đơn lẻ: tài khoản trong file phải là thông tin được cấp cho đúng lựa chọn.
 
 ## Kiểm tra
 
 `node tests/insurance.test.cjs`
+
+Hỗ trợ file Test 2QR: tài khoản định danh chữ/số 4–34 ký tự; nội dung chuyển khoản không dấu tối đa 95 ký tự được giữ đầy đủ trong QR. Cột Khoản Thu thay cho FeeName; AccountName có thể dùng để hiển thị tên học sinh, chỉ bỏ hậu tố lớp ở tên in và giữ nguyên AccountName nguồn. Hai khoản BHYT và BHYT+BHTT được nhận diện để hiển thị phần bắt buộc / tự nguyện, tính chênh lệch BHTT từ hai số tiền và nhắc chỉ chọn một QR.
+
+Xuất riêng PDF: một lớp tải PDF trực tiếp; nhiều lớp tải ZIP chứa PDF từng lớp. Xuất riêng ảnh: ZIP chia thư mục lớp. Xuất cả ảnh và PDF: ZIP theo lớp kèm Excel/CSV đối chiếu.
