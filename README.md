@@ -1,17 +1,25 @@
 # BIDV QR thu hộ trường học
 
-## Tab QR Bảo hiểm · 2 phương án
+Ba chức năng: Tạo QR, Thông báo nộp tiền, Thông báo lựa chọn QR.
 
-1. Nhập tên trường, chọn logo ở phần đầu trang.
-2. Trong tab bảo hiểm, tải mẫu CSV và điền mỗi học sinh một dòng: Mã học sinh, Họ và tên, Lớp, BHYT, BHTT, Đã nộp BHYT, Đã nộp BHTT. Có thể nhập Excel và chọn lại cột qua bước ghép cột. Mã học sinh nên định dạng văn bản để giữ số 0 đầu.
-3. Hoặc lấy dữ liệu đã nhập ở tab QR: chọn đúng tên hai khoản. Các dòng phải có chung mã học sinh gốc; không ghép theo tên hay cắt đuôi mã thanh toán. Dữ liệu QR cũ không có trạng thái đã nộp nên mặc định chưa nộp; dùng mẫu riêng nếu đã thu một phần.
-4. Cấu hình tài khoản nhận chung của trường, năm học/đợt thu, hạn nộp và liên hệ. Cấu hình lưu riêng theo tên trường; dữ liệu học sinh chỉ giữ trong bộ nhớ của phiên đang mở. Khi đổi trường phải nạp lại danh sách phù hợp.
-5. Chọn một/nhiều lớp, xem trước, xuất ZIP: ảnh PNG từng học sinh, PDF A5 từng lớp, bảng mã CSV và bảng phân bổ JSON.
+## Thông báo lựa chọn QR
 
-Chưa nộp: hai QR lựa chọn (BHYT; BHYT+BHTT). Đã nộp một khoản: chỉ tạo QR khoản còn lại. Đã hoàn thành: không tạo QR. Mức 0 được coi là không cần nộp khoản đó. Trạng thái do file đầu vào cung cấp, không tự đồng bộ từ website trường.
+Mỗi dòng nguồn là một QR đã có định danh, số tiền và tài khoản riêng. Không cộng hai lựa chọn BHYT và BHYT+BHTT thành nghĩa vụ phải thu, không tự sinh mã thanh toán, không suy ra mã học sinh bằng cách cắt mã khoản. Dữ liệu học sinh chỉ nằm trong bộ nhớ phiên; cách trình bày được lưu riêng theo tên trường.
 
-QR được tạo trên trình duyệt bằng thư viện cục bộ. Mã tham chiếu ổn định theo trường, học sinh, năm học/đợt, số tiền và tài khoản. Logo nằm ngoài vùng QR. Các tab cũ giữ cách tạo QR hiện có.
+Bấm **Tải mẫu Excel mới** trong tab để lấy mẫu có hướng dẫn. Ví dụ trong file là dữ liệu giả, phải thay bằng thông tin đã đăng ký trước khi phát hành.
 
-Đây là QR chuyển khoản đến tài khoản người dùng cấu hình, không tự đăng ký mã khách hàng/hóa đơn thu hộ tại BIDV. Không dùng tài khoản định danh riêng BHYT để nhận tổng BHYT+BHTT trừ khi ngân hàng đã thiết lập phù hợp. Giữ bảng mã CSV/JSON để đối chiếu; các web trường hiện chưa có chức năng tự nhập bảng mã từ bidvqrgen. QR ảnh đã phát hành không tự bị khóa sau khi thanh toán.
+Cột bắt buộc: StudentID (mã học sinh gốc), StudentName, Class, CustomerCode (mã thu duy nhất), FeeName (tên lựa chọn), Amount (số tiền của QR), AccountNumber, BankBin, AccountName.
 
-Kiểm thử: `node tests/insurance.test.cjs`.
+Cột mở rộng: Remark (trống dùng CustomerCode), ChoiceGroup (trống dùng DOT_THU), Includes (khoản bao gồm), ChoiceNote (giải thích), ChoiceOrder (thứ tự). Các trường mã và tài khoản cần đặt dạng Text trong Excel để giữ số 0 đầu. Remark cần 1–25 ký tự không dấu gồm chữ, số, khoảng trắng, `_ . -`; không tự cắt hoặc thay nội dung nguồn.
+
+Gom theo StudentID + ChoiceGroup. Một học sinh có thể có nhiều nhóm độc lập; trong mỗi nhóm chỉ chọn một QR. Họ tên/lớp của cùng StudentID phải thống nhất. Mã thu không trùng trong file. Hai lựa chọn cùng ngân hàng, tài khoản và nội dung sẽ bị chặn vì không phân biệt được thông tin QR. Lựa chọn bị thiếu dòng chỉ còn một QR sẽ có cảnh báo.
+
+Ảnh A5 có tối đa hai QR/trang; nhóm nhiều lựa chọn có nhiều trang với số trang và lời nhắc chọn một QR trong toàn nhóm. ZIP theo lớp chứa PNG, PDF cả lớp và CSV đối chiếu đúng thông tin từng lựa chọn.
+
+Nạp riêng tại tab này sẽ nhận diện và cho ghép cột. Nạp ở tab Tạo QR rồi dùng lại cũng hỗ trợ các cột mở rộng; mã thu có thể lấy Remark của dữ liệu cũ nếu CustomerCode chưa có. Với dữ liệu cần giữ mã dạng Text, ưu tiên nạp riêng tại tab lựa chọn.
+
+Web tạo QR chuyển khoản từ file; không đăng ký khoản định danh ở ngân hàng, không cập nhật trạng thái thu, không tự khóa mã lựa chọn còn lại. Includes là mô tả, không phải sổ phân bổ kế toán. Không đặt số tiền gộp vào tài khoản định danh dành riêng cho khoản đơn lẻ: tài khoản trong file phải là thông tin được cấp cho đúng lựa chọn.
+
+## Kiểm tra
+
+`node tests/insurance.test.cjs`
