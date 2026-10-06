@@ -51,6 +51,7 @@ const fields=[
  ['code','Mã học sinh gốc', ['studentid','student id','ma hoc sinh','ma hs','ma moet'],true],
  ['name','Họ tên học sinh',['studentname','student name','ho va ten','ho ten','ho ten hoc sinh','ho va ten hoc sinh','ten hoc sinh','accountname','account name'],true],
  ['className','Lớp',['class','lop'],true],
+ ['birthdate','Ngày sinh (tùy chọn)',['ngay sinh','birthdate','date of birth','dob'],false],
  ['paymentCode','Mã thu riêng (trống: dùng tài khoản định danh)',['customercode','customer code','ma thu','ma kh','ma khach hang','paymentcode','accountnumber','so tai khoan dinh danh'],false],
  ['label','Tên khoản / lựa chọn',['feename','fee name','ten lua chon','khoan thu','ten khoan thu'],true],
  ['amount','Số tiền của QR',['amount','so tien','so tien phai nop'],true],
@@ -94,10 +95,10 @@ function noticeCanvas(e){
  text('Thông tin khoản thu và hướng dẫn lựa chọn thanh toán',620,234,21,muted,'400','center');
  text('Kỳ thu: '+e.settings.year,620,272,22,teal,'400','center');
  box(70,326,1100,95);line(421);
- const cols=[70,580,740];for(const x of cols.slice(1)){c.beginPath();c.moveTo(x,326);c.lineTo(x,421);c.stroke();}
- text('HỌ VÀ TÊN HỌC SINH',90,344,17,teal,'700');text(e.student.name,90,375,28,ink,'700','left',465);
- text('LỚP',600,344,17,teal,'700');text(e.student.className,600,375,25,ink,'700','left',120);
- text('MÃ HỌC SINH',760,344,17,teal,'700');text(e.student.code,760,375,24,ink,'700','left',390);
+ const cols=e.student.birthdate?[70,550,690,960]:[70,580,740];for(const x of cols.slice(1)){c.beginPath();c.moveTo(x,326);c.lineTo(x,421);c.stroke();}
+ text('HỌ VÀ TÊN HỌC SINH',90,344,17,teal,'700');text(e.student.name,90,375,28,ink,'700','left',e.student.birthdate?435:465);
+ const classX=e.student.birthdate?570:600;text('LỚP',classX,344,17,teal,'700');text(e.student.className,classX,375,25,ink,'700','left',100);
+ const codeX=e.student.birthdate?710:760;text('MÃ HỌC SINH',codeX,344,17,teal,'700');text(e.student.code,codeX,375,24,ink,'700','left',e.student.birthdate?230:390);if(e.student.birthdate){text('NGÀY SINH',980,344,17,teal,'700');text(e.student.birthdate,980,375,22,ink,'700','left',170);}
  text('CHI TIẾT CÁC KHOẢN THU',70,452,22,teal,'700');line(486);
  text('STT',95,501,18,teal,'700');text('NỘI DUNG KHOẢN THU',175,501,18,teal,'700');text('TÍNH CHẤT',780,501,18,teal,'700');text('SỐ TIỀN',1150,501,18,teal,'700','right');line(534);
  if(e.insuranceSummary){

@@ -17,7 +17,7 @@ function groupRows(input){
  if(codes.has(key(paymentCode)))throw Error('Trùng mã thu: '+paymentCode);codes.add(key(paymentCode));
  const route=bin+'|'+accountNumber+'|'+key(remark);if(routes.has(route))throw Error('Hai dòng có cùng ngân hàng, tài khoản và nội dung QR; không phân biệt được lựa chọn.');routes.add(route);
  const studentKey=key(code),identity=JSON.stringify([name,className]);if(identities.has(studentKey)&&identities.get(studentKey)!==identity)throw Error('Mã học sinh có họ tên/lớp mâu thuẫn: '+code);identities.set(studentKey,identity);
- const groupKey=JSON.stringify([studentKey,key(group)]);if(!groups.has(groupKey))groups.set(groupKey,{student:{code,name,className},group,options:[]});
+ const groupKey=JSON.stringify([studentKey,key(group)]);if(!groups.has(groupKey))groups.set(groupKey,{student:{code,name,className,birthdate:bounded(raw.birthdate,'ngày sinh',40,false)},group,options:[]});
  const order=clean(raw.order);if(order&&!/^\d{1,4}$/.test(order))throw Error('Thứ tự phải là số nguyên 0–9999.');
  groups.get(groupKey).options.push({label,paymentCode,amount:amount(raw.amount),bin,accountNumber,accountName,remark,includesExplicit:!!clean(raw.includes),noteExplicit:!!clean(raw.note),includes:bounded(raw.includes||label,'khoản bao gồm',220),note:bounded(raw.note,'ghi chú lựa chọn',160,false),order:order?Number(order):index,sourceRow:raw.sourceRow||index+2});
  }catch(e){throw Error('Dòng '+(raw.sourceRow||index+2)+': '+e.message);}});
