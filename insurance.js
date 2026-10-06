@@ -86,6 +86,8 @@ function noticeCanvas(e){
  const wrap=(s,x,y,width,size=21,line=27,maxLines=3)=>{c.font='400 '+size+'px Arial';let lines=[],row='';for(const word of String(s).split(/\s+/)){const next=row?row+' '+word:word;if(c.measureText(next).width>width&&row){lines.push(row);row=word;}else row=next;}if(row)lines.push(row);if(lines.length>maxLines)lines=[...lines.slice(0,maxLines-1),lines.slice(maxLines-1).join(' ')];lines.forEach((v,i)=>text(v,x,y+i*line,size,ink,'400','left',width));};
  const line=(y,x=70,w=1100)=>{c.strokeStyle=border;c.lineWidth=1;c.beginPath();c.moveTo(x,y);c.lineTo(x+w,y);c.stroke();};
  const box=(x,y,w,h,fill='white')=>{c.fillStyle=fill;c.fillRect(x,y,w,h);c.strokeStyle=border;c.lineWidth=1;c.strokeRect(x,y,w,h);};
+ // Compact vertical spacing; preserve the QR's native module size.
+ c.save();c.translate(0,-20);
  // School notice heading, with optional issuing authority and signatory.
  text(e.settings.authority||'',310,70,21,teal,'700','center',470);
  text(e.settings.school,310,103,24,teal,'700','center',470);
@@ -110,16 +112,18 @@ function noticeCanvas(e){
   text('Số tiền trên là từng phương án thay thế nhau, không cộng thành tổng phải nộp.',70,657,21,muted);
  }
  if(e.settings.intro)wrap(e.settings.intro,70,695,1100,20,25,2);
+ c.translate(0,e.settings.intro?-20:-65);
  box(70,759,1100,70,'#fff8e4');text('CHỌN 1 TRONG '+e.options.length+' PHƯƠNG ÁN · CHỈ QUÉT 1 QR',620,772,28,teal,'700','center');text(e.insuranceSummary?'Không thanh toán cả hai QR. QR gộp đã bao gồm khoản BHYT.':'Các phương án thay thế nhau; không cộng số tiền của các QR.',620,808,20,ink,'400','center');
  const w=530,start=e.visible.length===1?355:70;
- e.visible.forEach((o,i)=>{const x=start+i*570,center=x+w/2;box(x,853,w,588);
+ e.visible.forEach((o,i)=>{const x=start+i*570,center=x+w/2;box(x,853,w,550);
   text('LỰA CHỌN '+(e.choiceStart+i+1)+' · '+(o.displayLabel||o.label),center,871,25,teal,'700','center',w-28);
   text(money(o.amount),center,908,31,ink,'700','center');
   if(e.mark){c.drawImage(e.mark,center-18,952,36,36);}
   const q=insuranceQrCanvas(o.payload,290);c.imageSmoothingEnabled=false;c.drawImage(q,Math.round(center-q.width/2),992);c.imageSmoothingEnabled=true;
   text('BIDV',center,1284,25,teal,'700','center');text(e.student.name+' · Lớp '+e.student.className,center,1318,21,ink,'700','center',w-28);
-  wrap('Bao gồm: '+o.includes,x+20,1360,w-40,20,26,2);
+  wrap('Bao gồm: '+o.includes,x+20,1348,w-40,20,26,2);
  });
+ c.translate(0,-40);
  box(70,1461,1100,141,'#f8fcfc');text('HƯỚNG DẪN THANH TOÁN',90,1478,21,teal,'700');
  text('1. Chọn một phương án, mở ứng dụng ngân hàng và quét QR tương ứng.',90,1510,20);
  text('2. Kiểm tra người nhận, số tiền và nội dung; xác nhận chuyển khoản.',90,1538,20);
@@ -129,6 +133,7 @@ function noticeCanvas(e){
  if(e.settings.place||e.settings.issueDate)text([e.settings.place,e.settings.issueDate?'ngày '+noticeDateVi(e.settings.issueDate):''].filter(Boolean).join(', '),930,1664,18,ink,'400','center',480);
  if(e.settings.signerRole)text(e.settings.signerRole.toUpperCase(),930,1690,18,teal,'700','center',480);
  if(e.settings.signer)text(e.settings.signer,930,1724,19,teal,'700','center',480);
+ c.restore();
  text('Trang '+e.page+'/'+e.pageCount+' · Chỉ chọn 1 QR trong toàn nhóm',70,1727,16,muted);
  return canvas;
 }
