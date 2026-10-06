@@ -274,10 +274,10 @@
 <p class="bi-note">Dùng <b>StudentID</b> làm mã học sinh gốc; <b>CustomerCode</b> là mã thu riêng nếu có; file chỉ có <b>AccountNumber</b> sẽ dùng chính tài khoản định danh, không cần thêm cột. <b>Amount</b>, <b>AccountNumber</b>, <b>BankBin</b>, <b>AccountName</b>, <b>Remark</b> lấy từ chính dòng đó. Web không tự tạo mã thu, tài khoản hoặc cộng tiền.</p>
 <div id="biMapping" hidden></div><p id="biDataStatus" role="status">Chưa có dữ liệu. Dữ liệu học sinh chỉ giữ trong phiên đang mở.</p>
 <details><summary>Kiểm tra các lựa chọn và tài khoản</summary><div id="biReview" class="bi-review"></div></details>
-<h3>2. Nội dung thông báo</h3><label>Tiêu đề<input id="biTitle" maxlength="65" value="THÔNG BÁO NỘP BẢO HIỂM"></label><label>Năm học / Đợt thu<input id="biYear" placeholder="2026–2027 / Đợt bảo hiểm" maxlength="60"></label>
+<h3>2. Nội dung thông báo</h3><label>Cơ quan chủ quản (tùy chọn)<input id="biAuthority" maxlength="70" placeholder="UBND XÃ HIẾU GIANG"></label><label>Tiêu đề<input id="biTitle" maxlength="65" value="THÔNG BÁO KHOẢN THU HỌC SINH"></label><label>Năm học / Đợt thu<input id="biYear" placeholder="2026–2027 / Đợt bảo hiểm" maxlength="60"></label>
 <label>Giải thích chung về các khoản thu<textarea id="biIntro" maxlength="250" rows="3" placeholder="Ví dụ: BHYT bắt buộc theo danh sách nhà trường; BHTT tự nguyện. Chọn QR 1 nếu chỉ nộp BHYT; chọn QR 2 nếu tham gia cả hai."></textarea></label>
 <p class="bi-note">Tên lựa chọn lấy từ <b>FeeName</b> hoặc <b>Khoản Thu</b>; chi tiết khoản bao gồm lấy từ <b>Includes</b>; lời giải thích riêng lấy từ <b>ChoiceNote</b>. QR gộp cần ghi rõ đã bao gồm khoản nào. Phần mô tả không làm thay đổi số tiền QR.</p>
-<label>Hạn nộp<input id="biDeadline" type="date"></label><label>Liên hệ của trường<input id="biContact" maxlength="100"></label><button id="biSave">Lưu cách trình bày cho trường này</button>
+<label>Hạn nộp<input id="biDeadline" type="date"></label><label>Liên hệ của trường<input id="biContact" maxlength="100"></label><label>Địa danh ban hành (tùy chọn)<input id="biPlace" maxlength="50" placeholder="Hiếu Giang"></label><label>Ngày thông báo (tùy chọn)<input id="biIssueDate" type="date"></label><label>Chức danh người ký (tùy chọn)<input id="biSignerRole" maxlength="50" placeholder="Hiệu trưởng"></label><label>Họ tên người ký (tùy chọn)<input id="biSigner" maxlength="70"></label><button id="biSave">Lưu cách trình bày cho trường này</button>
 <h3>3. Chọn lớp và xuất</h3><label>Lớp (Ctrl/Cmd để chọn nhiều)<select id="biClasses" multiple size="5"><option value="all" selected>Tất cả lớp</option></select></label>
 <div class="bi-actions"><button id="biPreview">Xem trước</button><button id="biPdf">Xuất PDF theo lớp</button><button id="biImages">Xuất ảnh theo lớp</button><button id="biExport">Xuất cả ảnh + PDF (ZIP)</button><button id="biCancel" hidden>Hủy xuất</button></div><p id="biProgress" role="status" aria-live="polite"></p>
 <p class="bi-note">Mỗi trang có tối đa 2 QR để giữ mã rõ khi in A5. Nhóm có nhiều lựa chọn sẽ có nhiều trang; chỉ chọn 1 QR trong toàn nhóm. Web không nhận trạng thái thanh toán, không đăng ký định danh và không khóa QR đã gửi.</p>
@@ -1194,7 +1194,7 @@
     }
   </script>
 <script src="vendor/qrcode.min.js"></script>
-<script src="choice-engine.js?v=20261006-actualfile"></script>
-<script src="insurance.js?v=20261006-actualfile"></script>
+<script src="choice-engine.js?v=20261006-school-notice"></script>
+<script src="insurance.js?v=20261006-school-notice"></script>
 </body>
 </html>
