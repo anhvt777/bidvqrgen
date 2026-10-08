@@ -10,7 +10,7 @@ function groupRows(input){
  input.forEach((raw,index)=>{try{
  const code=bounded(raw.code,'mã học sinh gốc',64),className=bounded(raw.className,'lớp',40);let name=bounded(raw.name,'họ tên học sinh',100);if(raw.nameFromAccount&&name.toUpperCase().endsWith(' '+className.toUpperCase()))name=name.slice(0,-className.length).trim();
  const group=bounded(raw.group||'DOT_THU','nhóm lựa chọn',50),paymentCode=bounded(raw.paymentCode||raw.accountNumber,'mã thu / định danh',50),label=bounded(raw.label,'tên lựa chọn',90);
- const bin=clean(raw.bin),accountNumber=clean(raw.accountNumber),accountName=bounded(raw.accountName,'tên tài khoản',100),remark=clean(raw.remark)||paymentCode;
+ const bin=clean(raw.bin),accountNumber=clean(raw.accountNumber),accountName=bounded(raw.accountName,'tên tài khoản',100),remark=bounded(raw.remark,'Remark (nội dung chuyển khoản)',95);
  if(!/^\d{6}$/.test(bin))throw Error('BIN phải gồm 6 chữ số.');
  if(!/^[A-Za-z0-9]{4,34}$/.test(accountNumber))throw Error('Tài khoản định danh phải gồm 4–34 ký tự chữ/số; đặt cột Excel dạng Text.');
  if(!/^[A-Za-z0-9 _.-]{1,95}$/.test(remark))throw Error('Nội dung QR phải dài 1–95 ký tự không dấu (chữ, số, khoảng trắng, _ . -). Web không tự cắt nội dung.');
