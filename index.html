@@ -245,7 +245,7 @@
             <label>Kỳ thu<input id="noticePeriod" type="text" maxlength="80" placeholder="Ví dụ: Tháng 10/2026 hoặc Đợt 1 năm học 2026-2027"></label>
             <label>Cơ quan chủ quản<input id="noticeParentUnit" type="text" value="UBND XÃ HIẾU GIANG" placeholder="UBND XÃ ..."></label>
             <label>Người ký / Hiệu trưởng<input id="noticeSigner" type="text" placeholder="Họ và tên (tùy chọn)"></label>
-            <label>Cách tạo QR<select id="noticeQrMode"><option value="auto">Tự động: gộp khi cùng tài khoản</option><option value="separate">QR riêng cho từng khoản</option><option value="single">1 QR tổng (chỉ khi cùng tài khoản)</option></select></label>
+            <label>Cách tạo QR<select id="noticeQrMode"><option value="separate">QR riêng từng khoản (giữ nguyên Remark)</option></select></label>
             <label class="notice-wide">Khoản cần thông báo
               <select id="noticeFees" multiple size="7"><option value="all" selected>Tất cả khoản phù hợp</option></select>
               <small>Danh sách này chỉ hiển thị các khoản thuộc lớp/học sinh đang chọn. Giữ Ctrl/Cmd để chọn nhiều khoản.</small>
@@ -476,6 +476,7 @@
         updateClassExportOptions(allData);
         renderQR(allData);
         refreshNoticeSelectors();
+        document.dispatchEvent(new CustomEvent("bidvqrgen:data-loaded", {detail:{rows:allData}}));
 
         if (allData.length > 0) {
           document.getElementById('downloadAll').style.display = "inline-block";
@@ -839,27 +840,22 @@
     function sameNoticeAccount(items) {
       return new Set(items.map(x=>String(x.BankBin||'')+'|'+String(x.AccountNumber||''))).size===1;
     }
-    function makeNoticeQrItem(group, items, combined=false) {
-      const base=items[0], amount=items.reduce((s,x)=>s+(Number(String(x.Amount||'').replace(/[^0-9.-]/g,''))||0),0);
-      const remark=combined ? ((base.StudentID||studentNameOnly(base))+' TONG').slice(0,25) : (base.Remark||'');
-      const displayName=formatStudentQrName(base.AccountName,base.Class);
-      return {
-        url:`https://img.vietqr.io/image/${base.BankBin}-${base.AccountNumber}-compact2.png?amount=${amount||''}&addInfo=${encodeURIComponent(remark)}&accountName=${encodeURIComponent(displayName)}`,
-        AccountNumber:base.AccountNumber,Bank:base.Bank,BankBin:base.BankBin,Amount:amount,AccountName:base.AccountName,DisplayName:displayName,
-        Remark:remark,Class:base.Class,StudentID:base.StudentID,FeeName:combined?'Tổng các khoản':(base.FeeName||base.Remark||'Khoản thu'),schoolLogoData:currentSchoolLogo()
-      };
+    // Giữ nguyên thông tin thanh toán do ngân hàng/trường cung cấp cho mỗi món thu.
+    // Không tự tạo QR tổng bằng cách cộng số tiền hoặc sửa Remark.
+    function makeNoticeQrItem(group, items) {
+      if(items.length!==1) throw new Error('Mỗi QR phải ứng với đúng một dòng khoản thu từ file Excel.');
+      const base=items[0];
+      if(!String(base.Remark||'').trim()) throw new Error('Thiếu Remark cho học sinh '+studentNameOnly(base)+'; không thể phát hành QR.');
+      return base;
     }
     async function buildNoticeEntries() {
       const groups=noticeGroups();if(!groups.length)throw new Error('Không có dữ liệu phù hợp để tạo thông báo.');
-      const mode=document.getElementById('noticeQrMode').value,deadline=document.getElementById('noticeDeadline').value,collectionPeriod=document.getElementById('noticePeriod').value.trim(),message=document.getElementById('noticeMessage').value.trim();
+      const deadline=document.getElementById('noticeDeadline').value,collectionPeriod=document.getElementById('noticePeriod').value.trim(),message=document.getElementById('noticeMessage').value.trim();
       const parentUnit=document.getElementById('noticeParentUnit').value.trim(),signer=document.getElementById('noticeSigner').value.trim(),schoolName=schoolNameInput.value.trim()||'TRƯỜNG HỌC';
       localStorage.setItem('bidvqrgen:notice-parent-unit',parentUnit);localStorage.setItem('bidvqrgen:notice-period',collectionPeriod);localStorage.setItem('bidvqrgen:notice-signer',signer);
       const entries=[];
       for(const group of groups){
-        const canCombine=sameNoticeAccount(group.items);
-        if(mode==='single'&&!canCombine)throw new Error('Một số học sinh có nhiều tài khoản định danh khác nhau. Hãy chọn “Tự động” hoặc “QR riêng cho từng khoản”.');
-        const combine=mode==='single'||(mode==='auto'&&canCombine);
-        const qrItems=combine?[makeNoticeQrItem(group,group.items,true)]:group.items.map(item=>makeNoticeQrItem(group,[item],false));
+        const qrItems=group.items.map(item=>makeNoticeQrItem(group,[item]));
         for(const q of qrItems)q.imageData=await prepareQrImage(q);
         entries.push({...group,qrItems,deadline,collectionPeriod,message,parentUnit,signer,schoolName});
       }
