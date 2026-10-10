@@ -165,7 +165,7 @@
     .notice-payment-section{display:grid;grid-template-columns:290px 1fr;gap:20px;align-items:center;margin-top:13px;padding-top:13px;border-top:1.5px solid #dbe8e5}
     .notice-qr-column{text-align:center}.notice-payment-label{font-size:9px;font-weight:700;color:#006B68;letter-spacing:.35px;margin-bottom:6px}
     .notice-qr-grid{display:grid;grid-template-columns:1fr;gap:8px}.notice-qr-grid.multi{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .notice-qr-simple{text-align:center}.notice-qr-simple img{display:block;width:225px;max-width:100%;height:auto;margin:0 auto}.notice-qr-simple small{display:block;margin-top:5px;color:#275b58;font-size:8px;font-weight:700}.notice-qr-grid.multi .notice-qr-simple img{width:155px}.notice-qr-grid.multi .notice-qr-simple small{font-size:7px}
+    .notice-qr-simple{text-align:center}.notice-qr-simple img{display:block;width:225px;max-width:100%;height:auto;margin:0 auto}.notice-qr-simple small{display:block;margin-top:5px;color:#275b58;font-size:8px;font-weight:700}.notice-qr-grid.multi .notice-qr-simple img{width:155px}.notice-qr-grid.multi .notice-qr-simple small{font-size:7px}.notice-a4:has(.notice-qr-grid.multi) .notice-payment-section{grid-template-columns:minmax(340px,1.15fr) minmax(220px,1fr);gap:12px}.notice-a4:has(.notice-qr-grid.multi) .notice-qr-grid.multi .notice-qr-simple img{width:190px}.notice-a4:has(.notice-qr-grid.multi) .notice-qr-grid.multi .notice-qr-simple small{font-size:9px}
     .notice-guide{background:#f8fbfa;border:1px solid #d9e6e3;border-radius:10px;padding:12px 14px;font-size:9px;line-height:1.45}.notice-guide h2{font-size:13px;margin:0 0 7px;color:#006B68}.notice-guide ol{margin:0 0 8px 18px;padding:0}.notice-guide li{margin:4px 0}.notice-deadline-box{display:flex;justify-content:space-between;gap:8px;align-items:center;background:#fff2f0;border:1px solid #f1d5d1;border-radius:8px;padding:7px 9px}.notice-deadline-box span{font-size:8px;color:#7b6b69;text-transform:uppercase;font-weight:700}.notice-deadline-box strong{font-size:10px;color:#b23b35}.notice-final-message{margin:8px 0 0;color:#536764;border-top:1px dashed #d7e2df;padding-top:7px}
     .notice-footer-row{display:flex;justify-content:flex-end;align-items:flex-start;margin-top:12px}.notice-signature-box{width:310px;text-align:center;display:grid;justify-items:center;gap:4px}.notice-signature-box i{font-size:9px;color:#53625f}.notice-signature-box strong{font-size:10px;letter-spacing:.2px}.notice-signature-space{width:100%;height:74px}.notice-signature-box span{font-size:10px;font-weight:700;min-height:12px}
     @media(max-width:600px){.notice-student-panel{grid-template-columns:1fr 1fr}.notice-payment-section{grid-template-columns:1fr}.notice-footer-row{justify-content:stretch}.notice-signature-box{width:100%}}
@@ -224,6 +224,7 @@
             <div><b>1. Xuất thông báo</b><small>Chọn mẫu và xuất nhanh sau khi thiết lập đối tượng bên dưới.</small></div>
           </div>
           <label class="template-option selected"><input type="radio" name="noticeTemplate" value="a4" checked><span><b>Mẫu A4 chuẩn</b><small>In/PDF, mỗi học sinh một trang.</small></span><em>A4</em></label>
+          <label class="template-option"><input type="radio" name="noticeTemplate" value="insurance2"><span><b>Mẫu 2 QR BHYT + BHTT</b><small>Một học sinh / một thông báo; xuất PDF hoặc PNG, 2 QR riêng.</small></span><em>2 QR</em></label>
           <label class="template-option"><input type="radio" name="noticeTemplate" value="mobile"><span><b>Mẫu ảnh điện thoại</b><small>Gọn, QR lớn, gửi Zalo/Messenger.</small></span><em>9:16</em></label>
           <div class="notice-actions">
             <button id="previewNotices" type="button">Xem trước</button>
@@ -424,6 +425,7 @@
         Class:pick(['class','lop','khoi lop'],6),
         StudentID:pick(['studentid','student id','ma hoc sinh','ma hs','ma moet'],7),
         FeeName:pick(['feename','fee name','khoan thu','khoan nop','noi dung khoan thu','dich vu cap 2'],8),
+        FeeCode:pick(['feecode','fee code','ma khoan thu','ma khoan nop','ky hieu khoan thu','ma dich vu cap 2']),
         BirthDate:pick(['birthdate','birth date','ngay sinh','ngay thang nam sinh'],9),
         ParentName:pick(['parentname','parent name','phu huynh','ten phu huynh'],10),
         CustomerCode:pick(['customercode','customer code','ma thu','ma kh','ma khach hang']),
@@ -454,7 +456,7 @@
           const row=rows[i]||[];
           const AccountNumber=rowValue(row,map.AccountNumber), Bank=rowValue(row,map.Bank), BankBin=rowValue(row,map.BankBin), Amount=rowValue(row,map.Amount);
           const StudentName=rowValue(row,map.StudentName), AccountName=rowValue(row,map.AccountName), Remark=rowValue(row,map.Remark), Class=rowValue(row,map.Class), StudentID=rowValue(row,map.StudentID);
-          const FeeName=rowValue(row,map.FeeName), BirthDate=rowValue(row,map.BirthDate), ParentName=rowValue(row,map.ParentName);
+          const FeeName=rowValue(row,map.FeeName), FeeCode=rowValue(row,map.FeeCode), BirthDate=rowValue(row,map.BirthDate), ParentName=rowValue(row,map.ParentName);
           if (!AccountNumber || !BankBin) continue;
 
           const displayName = formatStudentQrName(AccountName, Class);
@@ -464,7 +466,7 @@
             url: qrUrl,
             filename: "",
             AccountNumber, Bank, BankBin, Amount, AccountName, StudentName: String(StudentName||'').trim(), DisplayName: displayName, Remark, Class, StudentID,
-            FeeName: String(FeeName||'').trim() || String(Remark||'').trim() || 'Khoản thu',
+            FeeName: String(FeeName||'').trim() || String(FeeCode||'').trim() || String(Remark||'').trim() || 'Khoản thu', FeeCode:String(FeeCode||'').trim(),
             BirthDate: String(BirthDate||'').trim(), ParentName: String(ParentName||'').trim(),
             CustomerCode:rowValue(row,map.CustomerCode), ChoiceGroup:rowValue(row,map.ChoiceGroup), Includes:rowValue(row,map.Includes), ChoiceNote:rowValue(row,map.ChoiceNote), ChoiceOrder:rowValue(row,map.ChoiceOrder),
             schoolLogoData: currentSchoolLogo()
@@ -777,8 +779,23 @@
     function noticeStudentKey(item) {
       return String(item.StudentID || '').trim() || [item.AccountName,item.Class].map(normalizeText).join('|');
     }
+    function insuranceFeeCode(item) {
+      const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toUpperCase().trim();
+      const code=norm(item.FeeCode);
+      if(code==='YT'||code==='TT')return code;
+      const name=norm(item.FeeName);
+      if(/BAO HIEM Y TE|\bBHYT\b/.test(name))return 'YT';
+      if(/BAO HIEM THAN THE|\bBHTT\b/.test(name))return 'TT';
+      if(name==='YT'||name==='TT')return name;
+      const remark=norm(item.Remark),m=remark.match(/(?:^|[^A-Z0-9])(YT|TT)(?=$|[^A-Z0-9])/);
+      return m?m[1]:'';
+    }
+    function insuranceFeeName(item){
+      const code=insuranceFeeCode(item);
+      return code==='YT'?'Bảo hiểm y tế':code==='TT'?'Bảo hiểm thân thể':(item.FeeName||item.Remark||'Khoản thu');
+    }
     function noticeFeeKey(item) {
-      return normalizeText(item.FeeName || item.Remark || 'Khoản thu');
+      return insuranceFeeCode(item) || normalizeText(item.FeeName || item.Remark || 'Khoản thu');
     }
     function selectedNoticeFees() {
       const values=[...document.getElementById('noticeFees').selectedOptions].map(o=>o.value);
@@ -803,7 +820,7 @@
       const feeSource=scopedItems.filter(item=>selectedStudentKey==='all'||noticeStudentKey(item)===selectedStudentKey);
       const feeMap=new Map();
       feeSource.forEach(item=>{const key=noticeFeeKey(item);if(!feeMap.has(key))feeMap.set(key,item);});
-      feeEl.innerHTML='<option value="all">Tất cả khoản của phạm vi đang chọn</option>'+[...feeMap.entries()].sort((a,b)=>String(a[1].FeeName||'').localeCompare(String(b[1].FeeName||''),'vi')).map(([key,item])=>'<option value="'+escapeHtmlNotice(key)+'">'+escapeHtmlNotice(item.FeeName||item.Remark||'Khoản thu')+'</option>').join('');
+      feeEl.innerHTML='<option value="all">Tất cả khoản của phạm vi đang chọn</option>'+[...feeMap.entries()].sort((a,b)=>String(a[1].FeeName||'').localeCompare(String(b[1].FeeName||''),'vi')).map(([key,item])=>'<option value="'+escapeHtmlNotice(key)+'">'+escapeHtmlNotice(insuranceFeeName(item))+'</option>').join('');
       const kept=[...feeEl.options].filter(o=>selected.has(o.value)&&o.value!=='all');
       if(kept.length)kept.forEach(o=>o.selected=true);else feeEl.options[0].selected=true;
 
@@ -849,7 +866,15 @@
       return base;
     }
     async function buildNoticeEntries() {
-      const groups=noticeGroups();if(!groups.length)throw new Error('Không có dữ liệu phù hợp để tạo thông báo.');
+      let groups=noticeGroups();if(!groups.length)throw new Error('Không có dữ liệu phù hợp để tạo thông báo.');
+      if(document.querySelector('input[name="noticeTemplate"]:checked')?.value==='insurance2'){
+        groups=groups.map(g=>{
+          const yt=g.items.filter(x=>insuranceFeeCode(x)==='YT'),tt=g.items.filter(x=>insuranceFeeCode(x)==='TT');
+          if(yt.length!==1||tt.length!==1)throw new Error('Học sinh '+studentNameOnly(g.student)+' lớp '+(g.student.Class||'')+' cần đúng một khoản YT và một khoản TT. Tìm thấy YT='+yt.length+', TT='+tt.length+'. Hãy kiểm tra mã khoản hoặc bộ lọc.');
+          const items=[yt[0],tt[0]],total=items.reduce((n,x)=>n+(Number(String(x.Amount||'').replace(/[^0-9.-]/g,''))||0),0);
+          return {...g,items,total};
+        });
+      }
       const deadline=document.getElementById('noticeDeadline').value,collectionPeriod=document.getElementById('noticePeriod').value.trim(),message=document.getElementById('noticeMessage').value.trim();
       const parentUnit=document.getElementById('noticeParentUnit').value.trim(),signer=document.getElementById('noticeSigner').value.trim(),schoolName=schoolNameInput.value.trim()||'TRƯỜNG HỌC';
       localStorage.setItem('bidvqrgen:notice-parent-unit',parentUnit);localStorage.setItem('bidvqrgen:notice-period',collectionPeriod);localStorage.setItem('bidvqrgen:notice-signer',signer);
@@ -862,10 +887,10 @@
       return entries;
     }
     function noticeQrHtml(qr) {
-      return '<div class="notice-qr-simple"><img src="'+qr.imageData+'" alt="QR thanh toán"><small>'+escapeHtmlNotice(qr.FeeName||'Thanh toán')+' · '+moneyNotice(qr.Amount)+'</small></div>';
+      return '<div class="notice-qr-simple"><img src="'+qr.imageData+'" alt="QR thanh toán"><small>'+escapeHtmlNotice(insuranceFeeName(qr))+' · '+moneyNotice(qr.Amount)+'</small></div>';
     }
     function noticeA4Html(entry) {
-      const rows=entry.items.map((item,i)=>'<tr><td>'+(i+1)+'</td><td>'+escapeHtmlNotice(item.FeeName||item.Remark||'Khoản thu')+'</td><td>'+moneyNotice(item.Amount)+'</td></tr>').join('');
+      const rows=entry.items.map((item,i)=>'<tr><td>'+(i+1)+'</td><td>'+escapeHtmlNotice(insuranceFeeName(item))+'</td><td>'+moneyNotice(item.Amount)+'</td></tr>').join('');
       const qrGrid='<div class="notice-qr-grid '+(entry.qrItems.length>1?'multi':'')+'">'+entry.qrItems.map(noticeQrHtml).join('')+'</div>';
       return `<article class="notice-a4">
         <div class="notice-doc-header">
@@ -943,7 +968,7 @@
           +'<div class="mobile-head"><strong>'+escapeHtmlNotice(entry.schoolName)+'</strong><span>Thông báo khoản thu học sinh</span>'+(entry.collectionPeriod?'<small>Kỳ thu: '+escapeHtmlNotice(entry.collectionPeriod)+'</small>':'')+'</div>'
           +'<div class="mobile-student"><b>'+escapeHtmlNotice(studentNameOnly(entry.student))+'</b><div>Lớp '+escapeHtmlNotice(entry.student.Class||'—')+' · Mã HS: '+escapeHtmlNotice(entry.student.StudentID||'—')+'</div><div>Ngày sinh: '+escapeHtmlNotice(birthDate)+'</div></div>'
           +'<div class="mobile-total"><span>TỔNG PHẢI NỘP</span><strong>'+moneyNotice(entry.total)+'</strong><b>Hạn nộp: '+escapeHtmlNotice(noticeDate(entry.deadline))+'</b></div>'
-          +'<div class="mobile-items">'+entry.items.map((x,i)=>'<div><span>'+(i+1)+'. '+escapeHtmlNotice(x.FeeName||x.Remark||'Khoản thu')+'</span><strong>'+moneyNotice(x.Amount)+'</strong></div>').join('')+'</div>'
+          +'<div class="mobile-items">'+entry.items.map((x,i)=>'<div><span>'+(i+1)+'. '+escapeHtmlNotice(insuranceFeeName(x))+'</span><strong>'+moneyNotice(x.Amount)+'</strong></div>').join('')+'</div>'
           +'<div class="mobile-qr-preview">'+entry.qrItems.map(noticeQrHtml).join('')+'</div>'
           +'<div class="mobile-note">'+escapeHtmlNotice(entry.message)+'</div>'
           +'</article>';
@@ -955,7 +980,7 @@
     }
     function noticeExportBaseName(entries) {
       const classes=[...new Set(entries.map(e=>String(e.student.Class||'').trim()).filter(Boolean))];
-      const fees=[...new Set(entries.flatMap(e=>e.items.map(item=>String(item.FeeName||item.Remark||'Khoản thu').trim())).filter(Boolean))];
+      const fees=[...new Set(entries.flatMap(e=>e.items.map(item=>String(insuranceFeeName(item)).trim())).filter(Boolean))];
       const classPart=classes.length===1?classes[0]:'Tất cả lớp';
       const feePart=fees.length===1?fees[0]:'Nhiều khoản';
       return safePathSegment(classPart+'_'+feePart);
@@ -1028,7 +1053,7 @@
         const dw=img.naturalWidth*ratio,dh=img.naturalHeight*ratio;
         ctx.drawImage(img,x+(cellW-dw)/2,qy,dw,dh);
         ctx.fillStyle=teal;ctx.font='700 23px Arial';ctx.textAlign='center';
-        ctx.fillText((q.FeeName||'Thanh toán')+' · '+moneyNotice(q.Amount),x+cellW/2,qy+dh+10);
+        ctx.fillText(insuranceFeeName(q)+' · '+moneyNotice(q.Amount),x+cellW/2,qy+dh+10);
         ctx.textAlign='left';
       }
 
