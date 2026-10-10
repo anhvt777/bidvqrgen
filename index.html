@@ -182,6 +182,26 @@
       @page{size:A4 portrait;margin:6mm}
     }
 
+
+    .notice-insurance2 .notice-student-panel{grid-template-columns:2fr .6fr 1fr}
+    .notice-insurance2 .notice-fee-section th:nth-child(3),.notice-insurance2 .notice-fee-section td:nth-child(3){width:110px;text-align:center}
+    .insurance2-summary{padding:9px 4px;font-size:11px;color:#205a55}
+    .insurance2-summary span{margin:0 12px;color:#a9b9b5}
+    .insurance2-qr-section{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+    .insurance2-card{border:1px solid #d7e4e0;border-radius:10px;padding:13px 9px;text-align:center;min-width:0}
+    .insurance2-card-title{font-weight:700;color:#006B68;font-size:13px}
+    .insurance2-tag{display:inline-block;font-weight:700;font-size:9px;margin:6px;padding:4px 10px;border-radius:12px}
+    .insurance2-tag.required{background:#e6f4ee;color:#116e4b}.insurance2-tag.optional{background:#fff3db;color:#936200}
+    .insurance2-card-amount{font-size:18px;color:#133c39;font-weight:700;margin-bottom:6px}
+    .insurance2-card img{width:210px;max-width:100%;height:auto;display:block;margin:0 auto}
+    .insurance2-card-help{font-size:10px;color:#345b57;margin:8px auto 0;line-height:1.35}
+    .insurance2-instructions{border:1px solid #d7e5e2;border-radius:10px;background:#f6fbfa;padding:12px 16px;font-size:10px;line-height:1.55}
+    .insurance2-instructions h2{font-size:13px;color:#006B68;margin:0 0 6px}
+    .insurance2-instructions ol{padding-left:18px;margin:0}
+    .insurance2-instructions li{margin:4px 0}
+    .insurance2-deadline{color:#a63a35;margin:8px 0 0}
+    @media(max-width:600px){.insurance2-qr-section{gap:7px}.insurance2-card{padding:8px 3px}.insurance2-card-title{font-size:10px}.insurance2-card-amount{font-size:13px}}
+    @media print{body.printing-notices .notice-insurance2 .insurance2-qr-section{grid-template-columns:1fr 1fr!important}body.printing-notices .notice-insurance2 .insurance2-card img{width:45mm;height:auto;max-height:none}}
   </style>
 <link rel="stylesheet" href="insurance.css?v=20261006-choices">
 </head>
@@ -224,7 +244,7 @@
             <div><b>1. Xuất thông báo</b><small>Chọn mẫu và xuất nhanh sau khi thiết lập đối tượng bên dưới.</small></div>
           </div>
           <label class="template-option selected"><input type="radio" name="noticeTemplate" value="a4" checked><span><b>Mẫu A4 chuẩn</b><small>In/PDF, mỗi học sinh một trang.</small></span><em>A4</em></label>
-          <label class="template-option"><input type="radio" name="noticeTemplate" value="insurance2"><span><b>Mẫu 2 QR BHYT + BHTT</b><small>Một học sinh / một thông báo; xuất PDF hoặc PNG, 2 QR riêng.</small></span><em>2 QR</em></label>
+          <label class="template-option"><input type="radio" name="noticeTemplate" value="insurance2"><span><b>Mẫu 2 QR BHYT + BHTT</b><small>BHYT bắt buộc, BHTT tự nguyện; 2 QR riêng, không phải 2 phương án thay thế.</small></span><em>2 QR</em></label>
           <label class="template-option"><input type="radio" name="noticeTemplate" value="mobile"><span><b>Mẫu ảnh điện thoại</b><small>Gọn, QR lớn, gửi Zalo/Messenger.</small></span><em>9:16</em></label>
           <div class="notice-actions">
             <button id="previewNotices" type="button">Xem trước</button>
@@ -889,7 +909,68 @@
     function noticeQrHtml(qr) {
       return '<div class="notice-qr-simple"><img src="'+qr.imageData+'" alt="QR thanh toán"><small>'+escapeHtmlNotice(insuranceFeeName(qr))+' · '+moneyNotice(qr.Amount)+'</small></div>';
     }
+
+    // Mẫu riêng: hai QR độc lập, BHYT bắt buộc và BHTT tự nguyện.
+    function noticeInsurance2A4Html(entry) {
+      const yt=entry.qrItems.find(x=>insuranceFeeCode(x)==='YT');
+      const tt=entry.qrItems.find(x=>insuranceFeeCode(x)==='TT');
+      if(!yt||!tt)throw new Error('Thiếu QR BHYT hoặc BHTT của '+studentNameOnly(entry.student));
+      const row=(item,index,nature)=>'<tr><td>'+index+'</td><td>'+escapeHtmlNotice(insuranceFeeName(item))+'</td><td>'+nature+'</td><td>'+moneyNotice(item.Amount)+'</td></tr>';
+      const card=(item,voluntary)=>`
+        <div class="insurance2-card">
+          <div class="insurance2-card-title">${voluntary?'QR BẢO HIỂM THÂN THỂ':'QR BẢO HIỂM Y TẾ'}</div>
+          <div class="insurance2-tag ${voluntary?'optional':'required'}">${voluntary?'TỰ NGUYỆN':'BẮT BUỘC'}</div>
+          <div class="insurance2-card-amount">${moneyNotice(item.Amount)}</div>
+          <img src="${item.imageData}" alt="QR ${voluntary?'BHTT':'BHYT'}" />
+          <div class="insurance2-card-help">${voluntary?'Quét QR này nếu đăng ký tham gia BHTT':'Quét QR này để thanh toán BHYT'}</div>
+        </div>`;
+      return `<article class="notice-a4 notice-insurance2">
+        <div class="notice-doc-header">
+          <div class="notice-school-block"><strong>${escapeHtmlNotice(entry.parentUnit||'')}</strong><b>${escapeHtmlNotice(entry.schoolName)}</b></div>
+          <div class="notice-national-block"><strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><b>Độc lập - Tự do - Hạnh phúc</b><span></span></div>
+        </div>
+        <div class="notice-title-block"><h1>THÔNG BÁO KHOẢN THU HỌC SINH</h1>
+          <p>Thông tin bảo hiểm và hướng dẫn thanh toán</p>
+          <div class="notice-title-meta">
+            ${entry.collectionPeriod?'<span><b>Kỳ thu:</b> '+escapeHtmlNotice(entry.collectionPeriod)+'</span>':''}
+            ${entry.deadline?'<span><b>Hạn nộp:</b> '+escapeHtmlNotice(noticeDate(entry.deadline))+'</span>':''}
+          </div>
+        </div>
+        <section class="notice-student-panel">
+          <div class="notice-student-main"><span>HỌ VÀ TÊN HỌC SINH</span><strong>${escapeHtmlNotice(studentNameOnly(entry.student))}</strong></div>
+          <div><span>LỚP</span><strong>${escapeHtmlNotice(entry.student.Class||'—')}</strong></div>
+          <div><span>NGÀY SINH</span><strong>${escapeHtmlNotice(entry.student.BirthDate||'—')}</strong></div>
+        </section>
+        <section class="notice-fee-section">
+          <div class="notice-section-heading"><strong>CHI TIẾT CÁC KHOẢN THU</strong></div>
+          <table><thead><tr><th>STT</th><th>Nội dung khoản thu</th><th>Tính chất</th><th>Số tiền</th></tr></thead>
+          <tbody>${row(yt,1,'Bắt buộc')}${row(tt,2,'Tự nguyện')}</tbody></table>
+          <div class="insurance2-summary">BHYT cần nộp: <b>${moneyNotice(yt.Amount)}</b> <span>·</span> BHTT tự nguyện: <b>${moneyNotice(tt.Amount)}</b></div>
+        </section>
+        <section class="insurance2-qr-section">
+          ${card(yt,false)}
+          ${card(tt,true)}
+        </section>
+        <section class="insurance2-instructions">
+          <h2>HƯỚNG DẪN THANH TOÁN</h2>
+          <ol>
+            <li><b>Bảo hiểm y tế (BHYT):</b> Phụ huynh quét QR bên trái để thanh toán khoản bắt buộc.</li>
+            <li><b>Bảo hiểm thân thể (BHTT):</b> Đây là khoản tự nguyện. Nếu đăng ký tham gia, phụ huynh quét thêm QR bên phải; nếu không tham gia thì không cần quét QR BHTT.</li>
+            <li>Hai QR là hai khoản riêng, không phải hai phương án thanh toán thay thế nhau. Phụ huynh cần nộp khoản nào thì quét đúng QR của khoản đó.</li>
+            <li>Trước khi chuyển tiền, kiểm tra tên người nhận, số tiền và nội dung thanh toán hiển thị trong ứng dụng ngân hàng.</li>
+          </ol>
+          ${entry.deadline?'<p class="insurance2-deadline"><b>Hạn nộp:</b> '+escapeHtmlNotice(noticeDate(entry.deadline))+'</p>':''}
+          <p class="notice-final-message">${escapeHtmlNotice(entry.message||'Nếu phụ huynh đã thanh toán, vui lòng bỏ qua thông báo này.')}</p>
+        </section>
+        <section class="notice-footer-row"><div class="notice-signature-box">
+          <i>Hiếu Giang, ngày ${new Intl.DateTimeFormat('vi-VN').format(new Date())}</i>
+          <strong>HIỆU TRƯỞNG</strong><div class="notice-signature-space"></div><span>${escapeHtmlNotice(entry.signer||'')}</span>
+        </div></section>
+      </article>`;
+    }
+
     function noticeA4Html(entry) {
+      if(document.querySelector('input[name="noticeTemplate"]:checked')?.value==='insurance2')return noticeInsurance2A4Html(entry);
       const rows=entry.items.map((item,i)=>'<tr><td>'+(i+1)+'</td><td>'+escapeHtmlNotice(insuranceFeeName(item))+'</td><td>'+moneyNotice(item.Amount)+'</td></tr>').join('');
       const qrGrid='<div class="notice-qr-grid '+(entry.qrItems.length>1?'multi':'')+'">'+entry.qrItems.map(noticeQrHtml).join('')+'</div>';
       return `<article class="notice-a4">
