@@ -565,10 +565,12 @@
       // Xuất ở 2 lần kích thước gốc; logo và chữ được vẽ trực tiếp ở độ phân giải cao.
       // Giữ các ô QR sắc cạnh khi phóng, chỉ bật nội suy mượt cho logo.
       const outputScale = 2;
-      canvas.width = width * outputScale;
-      canvas.height = height * outputScale;
+      if(!width||!height||!Number.isFinite(width)||!Number.isFinite(height))throw new Error('Ảnh QR đầu vào không hợp lệ.');
+      const safeScale=Math.min(outputScale,Math.max(1,Math.floor(4096/Math.max(width,height))));
+      canvas.width=Math.round(width*safeScale);
+      canvas.height=Math.round(height*safeScale);
       const ctx = canvas.getContext('2d');
-      ctx.scale(outputScale, outputScale);
+      ctx.scale(safeScale, safeScale);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(sourceImage, 0, 0, width, height);
       ctx.imageSmoothingEnabled = true;
@@ -630,16 +632,20 @@
         ctx.fillText(amountLabel, width / 2, Math.round(height * 0.96), width * 0.89);
       }
 
-      return canvas.toDataURL('image/png');
+      const result=canvas.toDataURL('image/png');
+      if(!/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(result))throw new Error('Trình duyệt không xuất được PNG hợp lệ từ canvas.');
+      return result;
     }
 
     function prepareQrImage(item, loadedQrImage = null) {
-      if (item.imageData) return Promise.resolve(item.imageData);
+      if (isValidQrDataUrl(item.imageData)) return Promise.resolve(item.imageData);
+      item.imageData=null;
       if (!item.imagePromise) {
-        const qrImagePromise = loadedQrImage ? Promise.resolve(loadedQrImage) : loadImage(item.url);
+        const qrImagePromise = loadedQrImage && loadedQrImage.complete && loadedQrImage.naturalWidth && loadedQrImage.src===item.url ? Promise.resolve(loadedQrImage) : loadImage(item.url);
         const schoolLogoPromise = item.schoolLogoData ? loadImage(item.schoolLogoData) : Promise.resolve(null);
         item.imagePromise = Promise.all([qrImagePromise, loadBrandingImages(), schoolLogoPromise]).then(([image, logos, schoolLogo]) => {
           item.imageData = composeQrImage(image, item.DisplayName || item.AccountName || '', item.Amount, schoolLogo, logos[0]);
+          if(!isValidQrDataUrl(item.imageData))throw new Error('Ảnh QR được tạo không phải PNG hợp lệ.');
           return item.imageData;
         }).catch(error => {
           item.imagePromise = null;
@@ -901,7 +907,7 @@
       const entries=[];
       for(const group of groups){
         const qrItems=group.items.map(item=>makeNoticeQrItem(group,[item]));
-        for(const q of qrItems)q.imageData=await prepareQrImage(q);
+        for(const q of qrItems){q.imageData=await prepareQrImage(q);if(!isValidQrDataUrl(q.imageData))throw new Error('Không tạo được QR hợp lệ cho '+studentNameOnly(group.student)+' ('+insuranceFeeName(q)+').');}
         entries.push({...group,qrItems,deadline,collectionPeriod,message,parentUnit,signer,schoolName});
       }
       return entries;
@@ -1248,6 +1254,7 @@
       for (const qr of items) {
         try {
           const dataUrl = await prepareQrImage(qr);
+          if(!isValidQrDataUrl(dataUrl))throw new Error('PNG rỗng hoặc không hợp lệ.');
           const folder = zip.folder(safePathSegment(qr.Class || 'Khong lop'));
           folder.file(qr.filename, dataURLToBlob(dataUrl));
           added++;
@@ -1285,9 +1292,11 @@
       });
     }
 
+    function isValidQrDataUrl(value) { return typeof value==='string' && /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(value); }
     function dataURLToBlob(dataUrl) {
+      if(!isValidQrDataUrl(dataUrl))throw new Error('Ảnh QR PNG không hợp lệ hoặc canvas xuất ảnh thất bại; dừng xuất để tránh mất QR.');
       const parts = dataUrl.split(",");
-      const mime = parts[0].match(/:(.*?);/)[1];
+      const mime = 'image/png';
       const bstr = atob(parts[1]);
       let n = bstr.length;
       const u8arr = new Uint8Array(n);
