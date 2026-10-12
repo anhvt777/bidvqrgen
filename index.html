@@ -665,7 +665,7 @@
       }
 
       const result=canvas.toDataURL('image/png');
-      if(!/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(result))throw new Error('Trình duyệt không xuất được PNG hợp lệ từ canvas.');
+      if(!isValidQrDataUrl(result))throw new Error('Canvas không xuất được ảnh PNG (có thể do giới hạn bộ nhớ hoặc kích thước ảnh).');
       return result;
     }
 
@@ -1354,7 +1354,7 @@
       });
     }
 
-    function isValidQrDataUrl(value) { return typeof value==='string' && /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(value); }
+    function isValidQrDataUrl(value) { return typeof value==='string' && value.startsWith('data:image/png;base64,') && value.length>100; }
     function dataURLToBlob(dataUrl) {
       if(typeof dataUrl!=='string'||!/^data:image\/(png|jpeg);base64,/.test(dataUrl))throw new Error('Dữ liệu ảnh PNG/JPG không hợp lệ.');
       const parts = dataUrl.split(",");
