@@ -202,6 +202,38 @@
     .insurance2-deadline{color:#a63a35;margin:8px 0 0}
     @media(max-width:600px){.insurance2-qr-section{gap:7px}.insurance2-card{padding:8px 3px}.insurance2-card-title{font-size:10px}.insurance2-card-amount{font-size:13px}}
     @media print{body.printing-notices .notice-insurance2 .insurance2-qr-section{grid-template-columns:1fr 1fr!important}body.printing-notices .notice-insurance2 .insurance2-card img{width:45mm;height:auto;max-height:none}}
+
+    /* A4: compact one-page layout, preserve both QR at readable size. */
+    @media print{
+      @page{size:A4 portrait;margin:5mm 6mm}
+      body.printing-notices #noticePrintRoot{display:block!important}
+      body.printing-notices .notice-a4{width:198mm;min-height:0;height:auto;box-sizing:border-box;padding:3mm 5mm;margin:0 auto;border:0;box-shadow:none;break-inside:avoid;page-break-inside:avoid;page-break-after:always}
+      body.printing-notices .notice-a4:last-child{page-break-after:auto}
+      body.printing-notices .notice-insurance2 .notice-title-block{margin:6px 0}
+      body.printing-notices .notice-insurance2 .notice-title-block h1{font-size:19px;margin:0 0 3px}
+      body.printing-notices .notice-insurance2 .notice-student-panel>div{padding:6px 8px}
+      body.printing-notices .notice-insurance2 .notice-fee-section{margin-top:7px}
+      body.printing-notices .notice-insurance2 .notice-fee-section th,body.printing-notices .notice-insurance2 .notice-fee-section td{padding:4px 6px}
+      body.printing-notices .notice-insurance2 .insurance2-summary{padding:5px 2px}
+      body.printing-notices .notice-insurance2 .insurance2-qr-section{gap:10px;margin:6px 0}
+      body.printing-notices .notice-insurance2 .insurance2-card{padding:7px 7px}
+      body.printing-notices .notice-insurance2 .insurance2-card-title{font-size:11px}
+      body.printing-notices .notice-insurance2 .insurance2-tag{margin:3px;padding:2px 7px}
+      body.printing-notices .notice-insurance2 .insurance2-card-amount{font-size:15px;margin-bottom:3px}
+      body.printing-notices .notice-insurance2 .insurance2-card img{width:43mm;height:auto;max-width:100%;max-height:none}
+      body.printing-notices .notice-insurance2 .insurance2-card-help{margin-top:3px;font-size:9px}
+      body.printing-notices .notice-insurance2 .insurance2-instructions{padding:7px 10px;font-size:9px;line-height:1.32}
+      body.printing-notices .notice-insurance2 .insurance2-instructions h2{font-size:11px;margin-bottom:3px}
+      body.printing-notices .notice-insurance2 .insurance2-instructions li{margin:2px 0}
+      body.printing-notices .notice-insurance2 .notice-final-message{margin-top:4px;padding-top:4px}
+      body.printing-notices .notice-insurance2 .notice-footer-row{margin-top:5px}
+      body.printing-notices .notice-insurance2 .notice-signature-space{height:15mm}
+    }
+    /* Image export uses exactly the A4 layout, not the mobile notification. */
+    .notice-image-stage{position:fixed;left:-12000px;top:0;width:794px;background:#fff;z-index:-1}
+    .notice-image-stage .notice-a4{width:794px;min-height:0;box-sizing:border-box;padding:22px 25px;margin:0;background:#fff}
+    .notice-image-stage .insurance2-qr-section{grid-template-columns:1fr 1fr}
+    .notice-image-stage .insurance2-card img{width:185px}
   </style>
 <link rel="stylesheet" href="insurance.css?v=20261006-choices">
 </head>
@@ -249,7 +281,7 @@
           <div class="notice-actions">
             <button id="previewNotices" type="button">Xem trước</button>
             <button id="printNotices" type="button">🖨 In / Lưu PDF A4</button>
-            <button id="downloadNoticeImages" type="button">⬇ Xuất ZIP ảnh PNG</button>
+            <button id="downloadNoticeImages" type="button">⬇ Xuất ZIP ảnh thông báo (JPG/PNG)</button>
           </div>
           <div class="notice-note"><b>QR thanh toán:</b> sử dụng chính BankBin, AccountNumber và AccountName từ file Excel. Không cần cấu hình lại tài khoản nhận tiền.</div>
         </article>
@@ -1152,12 +1184,40 @@
       return canvas.toDataURL('image/png');
     }
 
+    async function a4NoticeImage(entry) {
+      if(typeof html2canvas!=='function')throw new Error('Không tải được thư viện xuất ảnh A4. Kiểm tra kết nối mạng và tải lại trang.');
+      const stage=document.createElement('div');
+      stage.className='notice-image-stage';
+      stage.innerHTML=noticeA4Html(entry);
+      document.body.appendChild(stage);
+      try {
+        await Promise.all([...stage.querySelectorAll('img')].map(img=>img.decode()));
+        await document.fonts.ready;
+        const node=stage.querySelector('.notice-a4');
+        const canvas=await html2canvas(node,{backgroundColor:'#ffffff',scale:2,useCORS:true,logging:false,scrollX:0,scrollY:0,windowWidth:1100});
+        if(!canvas.width||!canvas.height)throw new Error('Không thể tạo ảnh thông báo.');
+        const jpeg=canvas.toDataURL('image/jpeg',0.94);
+        if(!/^data:image\/jpeg;base64,/.test(jpeg))throw new Error('Ảnh JPG xuất ra không hợp lệ.');
+        return jpeg;
+      } finally {stage.remove();}
+    }
     async function downloadNoticeImages() {
-      const entries=await buildNoticeEntries(),zip=new JSZip();let done=0;document.getElementById('noticeQrStatus').textContent='Đang tạo ảnh…';
-      for(const entry of entries){const data=await mobileNoticePng(entry),folder=zip.folder(safePathSegment(entry.student.Class||'Khong lop'));folder.file(safePathSegment(entry.student.Class||'Lop')+'_'+safePathSegment(studentNameOnly(entry.student))+'_'+safePathSegment(entry.student.StudentID||'HS')+'.png',dataURLToBlob(data));done++;document.getElementById('noticeQrStatus').textContent=done+'/'+entries.length+' ảnh';}
-      const blob=await zip.generateAsync({type:'blob',compression:'STORE'});
-      const zipName=safePathSegment(noticeExportBaseName(entries)+'_Ảnh thông báo')+'.zip';
-      saveAs(blob,zipName);
+      const entries=await buildNoticeEntries(),zip=new JSZip();
+      const mode=document.querySelector('input[name="noticeTemplate"]:checked')?.value;
+      let done=0;
+      document.getElementById('noticeQrStatus').textContent='Đang tạo ảnh…';
+      for(const entry of entries){
+        const isA4=mode==='insurance2'||mode==='a4';
+        const data=isA4?await a4NoticeImage(entry):await mobileNoticePng(entry);
+        const ext=isA4?'.jpg':'.png';
+        const folder=zip.folder(safePathSegment(entry.student.Class||'Khong lop'));
+        const filename=safePathSegment(entry.student.Class||'Lop')+'_'+safePathSegment(studentNameOnly(entry.student))+'_'+safePathSegment(entry.student.StudentID||'HS')+ext;
+        folder.file(filename,dataURLToBlob(data));
+        done++;
+        document.getElementById('noticeQrStatus').textContent=done+'/'+entries.length+' ảnh';
+      }
+      const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+      saveAs(blob,safePathSegment(noticeExportBaseName(entries)+'_Anh_thong_bao')+'.zip');
       document.getElementById('noticeQrStatus').textContent=entries.length+' ảnh đã xuất';
     }
     function setMode(mode) {
@@ -1296,9 +1356,9 @@
 
     function isValidQrDataUrl(value) { return typeof value==='string' && /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(value); }
     function dataURLToBlob(dataUrl) {
-      if(!isValidQrDataUrl(dataUrl))throw new Error('Ảnh QR PNG không hợp lệ hoặc canvas xuất ảnh thất bại; dừng xuất để tránh mất QR.');
+      if(typeof dataUrl!=='string'||!/^data:image\/(png|jpeg);base64,/.test(dataUrl))throw new Error('Dữ liệu ảnh PNG/JPG không hợp lệ.');
       const parts = dataUrl.split(",");
-      const mime = 'image/png';
+      const mime = dataUrl.startsWith('data:image/jpeg;')?'image/jpeg':'image/png';
       const bstr = atob(parts[1]);
       let n = bstr.length;
       const u8arr = new Uint8Array(n);
@@ -1306,6 +1366,7 @@
       return new Blob([u8arr], { type: mime });
     }
   </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="vendor/qrcode.min.js"></script>
 <script src="choice-engine.js?v=20261006-compact-notice"></script>
 <script src="insurance.js?v=20261006-compact-notice"></script>
