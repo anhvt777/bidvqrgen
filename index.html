@@ -234,6 +234,15 @@
     .notice-image-stage .notice-a4{width:794px;min-height:0;box-sizing:border-box;padding:22px 25px;margin:0;background:#fff}
     .notice-image-stage .insurance2-qr-section{grid-template-columns:1fr 1fr}
     .notice-image-stage .insurance2-card img{width:185px}
+    /* Compact 2-QR cards consistently in preview, A4 print and JPG export. */
+    .notice-insurance2 .insurance2-qr-section{align-items:stretch;margin:9px 0 8px}
+    .notice-insurance2 .insurance2-card{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:10px 9px 9px}
+    .notice-insurance2 .insurance2-card-title{margin-bottom:3px;line-height:1.25}
+    .notice-insurance2 .insurance2-tag{margin:3px 0 5px}
+    .notice-insurance2 .insurance2-card-amount{margin:2px 0 6px}
+    .notice-insurance2 .insurance2-card img{display:block;max-width:100%;height:auto;margin:0 auto}
+    @media print{body.printing-notices .notice-insurance2 .insurance2-card{padding:7px 8px 7px}body.printing-notices .notice-insurance2 .insurance2-qr-section{margin:6px 0}}
+    .notice-image-stage .notice-insurance2 .insurance2-card{padding:9px 8px 8px}
   </style>
 <link rel="stylesheet" href="insurance.css?v=20261006-choices">
 </head>
@@ -972,7 +981,6 @@
           <div class="insurance2-tag ${voluntary?'optional':'required'}">${voluntary?'TỰ NGUYỆN':'BẮT BUỘC'}</div>
           <div class="insurance2-card-amount">${moneyNotice(item.Amount)}</div>
           <img src="${item.imageData}" alt="QR ${voluntary?'BHTT':'BHYT'}" />
-          <div class="insurance2-card-help">${voluntary?'Quét QR này nếu đăng ký tham gia BHTT':'Quét QR này để thanh toán BHYT'}</div>
         </div>`;
       return `<article class="notice-a4 notice-insurance2">
         <div class="notice-doc-header">
