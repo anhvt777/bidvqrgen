@@ -697,11 +697,10 @@
               item.composingPreview = false;
             }
           };
-          image.addEventListener('load', composePreview, { once: true });
+          // Không ghép sẵn hàng trăm canvas PNG khi vừa nạp Excel.
+          // Chỉ ghép khi tải riêng, in thông báo hoặc xuất ZIP để tránh cạn bộ nhớ.
           image.crossOrigin = 'anonymous';
           image.src = item.url;
-          // Xử lý cả trường hợp ảnh đã có sẵn trong bộ nhớ đệm của trình duyệt.
-          if (image.complete && image.naturalWidth) composePreview();
         } else {
           image.src = item.imageData;
         }
@@ -1257,6 +1256,9 @@
           if(!isValidQrDataUrl(dataUrl))throw new Error('PNG rỗng hoặc không hợp lệ.');
           const folder = zip.folder(safePathSegment(qr.Class || 'Khong lop'));
           folder.file(qr.filename, dataURLToBlob(dataUrl));
+          // ZIP đã giữ Blob; không lưu hàng trăm data URL lớn trong RAM.
+          qr.imageData=null;
+          qr.imagePromise=null;
           added++;
         } catch (err) {
           const reason = err && err.message ? err.message : String(err);
