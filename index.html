@@ -596,11 +596,13 @@
       const canvas = document.createElement('canvas');
       // Xuất ở 2 lần kích thước gốc; logo và chữ được vẽ trực tiếp ở độ phân giải cao.
       // Giữ các ô QR sắc cạnh khi phóng, chỉ bật nội suy mượt cho logo.
-      const outputScale = 2;
+      // Giới hạn ảnh ghép <= 1200px mỗi chiều, kể cả nguồn lớn bất thường.
+      // Không sử dụng Math.max(1, ...) vì có thể làm canvas quá kích thước.
+      const outputScale=2;
       if(!width||!height||!Number.isFinite(width)||!Number.isFinite(height))throw new Error('Ảnh QR đầu vào không hợp lệ.');
-      const safeScale=Math.min(outputScale,Math.max(1,Math.floor(4096/Math.max(width,height))));
-      canvas.width=Math.round(width*safeScale);
-      canvas.height=Math.round(height*safeScale);
+      const safeScale=Math.min(outputScale,1200/Math.max(width,height));
+      canvas.width=Math.max(1,Math.round(width*safeScale));
+      canvas.height=Math.max(1,Math.round(height*safeScale));
       const ctx = canvas.getContext('2d');
       ctx.scale(safeScale, safeScale);
       ctx.imageSmoothingEnabled = false;
@@ -665,7 +667,7 @@
       }
 
       const result=canvas.toDataURL('image/png');
-      if(!isValidQrDataUrl(result))throw new Error('Canvas không xuất được ảnh PNG (có thể do giới hạn bộ nhớ hoặc kích thước ảnh).');
+      if(!isValidQrDataUrl(result))throw new Error('Canvas không thể xuất PNG: nguồn '+width+'x'+height+', canvas '+canvas.width+'x'+canvas.height+', kết quả '+String(result).slice(0,32)+'.');
       return result;
     }
 
