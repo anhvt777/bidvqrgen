@@ -945,10 +945,14 @@
       const parentUnit=document.getElementById('noticeParentUnit').value.trim(),signer=document.getElementById('noticeSigner').value.trim(),schoolName=schoolNameInput.value.trim()||'TRƯỜNG HỌC';
       localStorage.setItem('bidvqrgen:notice-parent-unit',parentUnit);localStorage.setItem('bidvqrgen:notice-period',collectionPeriod);localStorage.setItem('bidvqrgen:notice-signer',signer);
       const entries=[];
+      let prepared=0;
+      const status=document.getElementById('noticeQrStatus');
+      status.textContent='Đang chuẩn bị QR: 0/'+groups.length+' thông báo';
       for(const group of groups){
         const qrItems=group.items.map(item=>makeNoticeQrItem(group,[item]));
-        for(const q of qrItems){q.imageData=await prepareQrImage(q);if(!isValidQrDataUrl(q.imageData))throw new Error('Không tạo được QR hợp lệ cho '+studentNameOnly(group.student)+' ('+insuranceFeeName(q)+').');}
+        await Promise.all(qrItems.map(async q=>{q.imageData=await prepareQrImage(q);if(!isValidQrDataUrl(q.imageData) && !(q.qrOriginalFallback && q.imageData===q.url))throw new Error('Không tạo được QR hợp lệ cho '+studentNameOnly(group.student)+' ('+insuranceFeeName(q)+').');}));
         entries.push({...group,qrItems,deadline,collectionPeriod,message,parentUnit,signer,schoolName});
+        status.textContent='Đang chuẩn bị QR: '+(++prepared)+'/'+groups.length+' thông báo';
       }
       return entries;
     }
@@ -1203,9 +1207,9 @@
         await Promise.all([...stage.querySelectorAll('img')].map(img=>img.decode()));
         await document.fonts.ready;
         const node=stage.querySelector('.notice-a4');
-        const canvas=await html2canvas(node,{backgroundColor:'#ffffff',scale:2,useCORS:true,logging:false,scrollX:0,scrollY:0,windowWidth:1100});
+        const canvas=await html2canvas(node,{backgroundColor:'#ffffff',scale:1.5,useCORS:true,logging:false,scrollX:0,scrollY:0,windowWidth:1100});
         if(!canvas.width||!canvas.height)throw new Error('Không thể tạo ảnh thông báo.');
-        const jpeg=canvas.toDataURL('image/jpeg',0.94);
+        const jpeg=canvas.toDataURL('image/jpeg',0.88);
         if(!/^data:image\/jpeg;base64,/.test(jpeg))throw new Error('Ảnh JPG xuất ra không hợp lệ.');
         return jpeg;
       } finally {stage.remove();}
@@ -1225,7 +1229,8 @@
         done++;
         document.getElementById('noticeQrStatus').textContent=done+'/'+entries.length+' ảnh';
       }
-      const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+      document.getElementById('noticeQrStatus').textContent='Đang đóng ZIP ('+done+' ảnh)…';
+      const blob=await zip.generateAsync({type:'blob',compression:'STORE'});
       saveAs(blob,safePathSegment(noticeExportBaseName(entries)+'_Anh_thong_bao')+'.zip');
       document.getElementById('noticeQrStatus').textContent=entries.length+' ảnh đã xuất';
     }
