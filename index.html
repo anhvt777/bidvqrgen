@@ -672,7 +672,7 @@
     }
 
     function prepareQrImage(item, loadedQrImage = null) {
-      if (isValidQrDataUrl(item.imageData)) return Promise.resolve(item.imageData);
+      if (isValidQrDataUrl(item.imageData) || (item.qrOriginalFallback && item.imageData===item.url)) return Promise.resolve(item.imageData);
       item.imageData=null;
       if (!item.imagePromise) {
         const qrImagePromise = loadedQrImage && loadedQrImage.complete && loadedQrImage.naturalWidth && loadedQrImage.src===item.url ? Promise.resolve(loadedQrImage) : loadImage(item.url);
@@ -681,9 +681,16 @@
           item.imageData = composeQrImage(image, item.DisplayName || item.AccountName || '', item.Amount, schoolLogo, logos[0]);
           if(!isValidQrDataUrl(item.imageData))throw new Error('Ảnh QR được tạo không phải PNG hợp lệ.');
           return item.imageData;
-        }).catch(error => {
+        }).catch(async error => {
           item.imagePromise = null;
-          throw error;
+          // Firefox/privacy settings can return "data:," from a valid canvas.
+          // The original VietQR is already built from this exact Excel row.
+          // Retain a working payment QR rather than displaying a broken image.
+          console.warn('Không xuất được ảnh ghép logo, sử dụng QR thanh toán gốc:', error);
+          await loadImage(item.url);
+          item.imageData=item.url;
+          item.qrOriginalFallback=true;
+          return item.url;
         });
       }
       return item.imagePromise;
@@ -1315,9 +1322,16 @@
       for (const qr of items) {
         try {
           const dataUrl = await prepareQrImage(qr);
-          if(!isValidQrDataUrl(dataUrl))throw new Error('PNG rỗng hoặc không hợp lệ.');
           const folder = zip.folder(safePathSegment(qr.Class || 'Khong lop'));
-          folder.file(qr.filename, dataURLToBlob(dataUrl));
+          let blob;
+          if(isValidQrDataUrl(dataUrl)) blob=dataURLToBlob(dataUrl);
+          else if(dataUrl===qr.url){
+            const response=await fetch(qr.url,{mode:'cors'});
+            if(!response.ok)throw new Error('Không tải được ảnh QR gốc: HTTP '+response.status);
+            blob=await response.blob();
+            if(!blob.type.startsWith('image/')||blob.size<100)throw new Error('Ảnh QR gốc tải về không hợp lệ.');
+          }else throw new Error('Ảnh QR không hợp lệ.');
+          folder.file(qr.filename, blob);
           // ZIP đã giữ Blob; không lưu hàng trăm data URL lớn trong RAM.
           qr.imageData=null;
           qr.imagePromise=null;
