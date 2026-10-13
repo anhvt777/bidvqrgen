@@ -1164,24 +1164,37 @@
       canvas.width=W;canvas.height=H;
       const ctx=canvas.getContext('2d');
       const dark='#173d3a',teal='#006B68',muted='#687b78',line='#d8e7e3';
-      ctx.fillStyle='#f7fbfa';ctx.fillRect(0,0,W,H);ctx.textBaseline='top';
+      ctx.fillStyle='#F2F8F6';ctx.fillRect(0,0,W,H);ctx.textBaseline='top';
 
+      // BIDV-themed translucent flower watermark, kept outside QR modules.
+      function watermark(cx,cy,r,alpha){
+        ctx.save();ctx.translate(cx,cy);ctx.globalAlpha=alpha;ctx.fillStyle='#C69B35';
+        for(let i=0;i<5;i++){ctx.save();ctx.rotate(i*Math.PI*2/5);ctx.beginPath();ctx.ellipse(0,-r*.54,r*.31,r*.52,0,0,Math.PI*2);ctx.fill();ctx.restore();}
+        ctx.restore();
+      }
+      function studentIcon(cx,cy){
+        ctx.save();ctx.fillStyle='#D9F0E9';ctx.beginPath();ctx.arc(cx,cy,39,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#00716B';ctx.beginPath();ctx.arc(cx,cy-10,11,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.ellipse(cx,cy+16,22,14,0,Math.PI,0);ctx.fill();ctx.restore();
+      }
+      watermark(960,86,115,.13);
+      watermark(960,365,90,.07);
       // Header
-      ctx.fillStyle='#e9f6f3';ctx.fillRect(0,0,W,190);
+      ctx.fillStyle='#dcefeb';ctx.fillRect(0,0,W,190);ctx.fillStyle='#006B68';ctx.fillRect(0,0,W,9);
       ctx.fillStyle=dark;ctx.font='700 42px Arial';ctx.fillText(entry.schoolName,65,38);
       ctx.font='28px Arial';ctx.fillStyle=muted;ctx.fillText('Thông báo khoản thu học sinh',65,96);
       if(entry.collectionPeriod){ctx.font='23px Arial';ctx.fillStyle=teal;ctx.fillText('Kỳ thu: '+entry.collectionPeriod,65,136);}
 
       // Student information
-      ctx.fillStyle='#fff';ctx.fillRect(45,215,990,220);
+      ctx.fillStyle='#fff';ctx.fillRect(45,215,990,220);studentIcon(105,285);
       ctx.strokeStyle=line;ctx.strokeRect(45,215,990,220);
-      ctx.fillStyle=dark;ctx.font='700 40px Arial';ctx.fillText(studentNameOnly(entry.student),90,248);
+      ctx.fillStyle=dark;ctx.font='700 40px Arial';ctx.fillText(studentNameOnly(entry.student),160,248,825);
       ctx.font='27px Arial';ctx.fillStyle=muted;
-      ctx.fillText('Lớp '+(entry.student.Class||'—')+'  •  Mã HS: '+(entry.student.StudentID||'—'),90,310);
-      ctx.fillText('Ngày sinh: '+(entry.student.BirthDate||'—'),90,352);
+      ctx.fillText('Lớp '+(entry.student.Class||'—')+'  •  Mã HS: '+(entry.student.StudentID||'—'),160,310,825);
+      ctx.fillText('Ngày sinh: '+(entry.student.BirthDate||'—'),160,352,825);
 
       // Total
-      ctx.fillStyle='#e2f4f0';ctx.fillRect(45,465,990,205);
+      ctx.fillStyle='#D8EFEA';ctx.fillRect(45,465,990,205);ctx.fillStyle='#C69B35';ctx.fillRect(45,465,7,205);
       ctx.fillStyle=dark;ctx.font='700 32px Arial';ctx.fillText('TỔNG PHẢI NỘP',90,505);
       ctx.fillStyle=teal;ctx.font='600 45px Arial';ctx.fillText(moneyNotice(entry.total),90,564);
       ctx.fillStyle='#b6403a';ctx.font='700 28px Arial';ctx.textAlign='right';ctx.fillText('Hạn nộp: '+noticeDate(entry.deadline),990,555);ctx.textAlign='left';
@@ -1217,15 +1230,15 @@
 
       const qrRows=Math.ceil(qrCount/cols);
       const footerY=Math.ceil(qrBottom+28);
-      ctx.fillStyle='#e7f3fb';ctx.fillRect(45,footerY,990,100);
-      ctx.fillStyle='#285b80';ctx.font='24px Arial';canvasTextWrap(ctx,entry.message,80,footerY+25,920,30,2);
+      ctx.fillStyle='#E5F1F1';ctx.fillRect(45,footerY,990,100);
+      ctx.fillStyle='#155D68';ctx.font='24px Arial';canvasTextWrap(ctx,entry.message,80,footerY+25,920,30,2);
 
       // Crop to real content and draw a rounded BIDV gold border, without
       // changing QR pixels or stretching its aspect ratio.
       const finalH=Math.min(H,Math.ceil(footerY+100+43));
       const out=document.createElement('canvas');out.width=W;out.height=finalH;
       const oc=out.getContext('2d');
-      oc.fillStyle='#f7fbfa';oc.fillRect(0,0,W,finalH);
+      oc.fillStyle='#F2F8F6';oc.fillRect(0,0,W,finalH);
       oc.save();
       oc.beginPath();
       oc.roundRect(12,12,W-24,finalH-24,28);oc.clip();
