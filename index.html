@@ -1160,7 +1160,7 @@
       if(line)lines.push(line);lines=lines.slice(0,maxLines);lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight));return y+lines.length*lineHeight;
     }
     async function mobileNoticePng(entry) {
-      const W=1080,H=1920,canvas=document.createElement('canvas');
+      const W=1080,H=2600,canvas=document.createElement('canvas');
       canvas.width=W;canvas.height=H;
       const ctx=canvas.getContext('2d');
       const dark='#173d3a',teal='#006B68',muted='#687b78',line='#d8e7e3';
@@ -1200,6 +1200,7 @@
       const cellW=qrCount===1?700:430;
       const targetW=qrCount===1?560:340;
       const startX=qrCount===1?(W-cellW)/2:80;
+      let qrBottom=y;
       for(let i=0;i<qrCount;i++){
         const q=entry.qrItems[i],col=i%cols,row=Math.floor(i/cols);
         const x=startX+col*(qrCount===1?0:470),qy=y+row*(targetW+105);
@@ -1207,6 +1208,7 @@
         const ratio=Math.min(targetW/img.naturalWidth,targetW/img.naturalHeight);
         const dw=img.naturalWidth*ratio,dh=img.naturalHeight*ratio;
         ctx.drawImage(img,x+(cellW-dw)/2,qy,dw,dh);
+        qrBottom=Math.max(qrBottom,qy+dh);
         ctx.fillStyle=teal;ctx.font='600 21px Arial';ctx.textAlign='center';
         // Ảnh QR đã chứa thông tin người nộp/số tiền: không in lặp chú thích.
         ctx.fillText('',x+cellW/2,qy+dh+10);
@@ -1214,12 +1216,28 @@
       }
 
       const qrRows=Math.ceil(qrCount/cols);
-      const qrBlockHeight=qrRows*(targetW+105);
-      const footerY=Math.min(H-145,y+qrBlockHeight+12);
+      const footerY=Math.ceil(qrBottom+28);
       ctx.fillStyle='#e7f3fb';ctx.fillRect(45,footerY,990,100);
       ctx.fillStyle='#285b80';ctx.font='24px Arial';canvasTextWrap(ctx,entry.message,80,footerY+25,920,30,2);
 
-      return canvas.toDataURL('image/png');
+      // Crop to real content and draw a rounded BIDV gold border, without
+      // changing QR pixels or stretching its aspect ratio.
+      const finalH=Math.min(H,Math.ceil(footerY+100+43));
+      const out=document.createElement('canvas');out.width=W;out.height=finalH;
+      const oc=out.getContext('2d');
+      oc.fillStyle='#f7fbfa';oc.fillRect(0,0,W,finalH);
+      oc.save();
+      oc.beginPath();
+      oc.roundRect(12,12,W-24,finalH-24,28);oc.clip();
+      oc.drawImage(canvas,0,0,W,finalH,0,0,W,finalH);
+      oc.restore();
+      oc.strokeStyle='#BA9027';oc.lineWidth=6;
+      oc.beginPath();oc.roundRect(12,12,W-24,finalH-24,28);oc.stroke();
+      oc.strokeStyle='#E6CD82';oc.lineWidth=2;
+      oc.beginPath();oc.roundRect(21,21,W-42,finalH-42,22);oc.stroke();
+      const png=out.toDataURL('image/png');
+      if(!isValidQrDataUrl(png))throw new Error('Trình duyệt không xuất được ảnh thông báo PNG. Vui lòng kiểm tra thiết lập quyền riêng tư canvas.');
+      return png;
     }
 
     async function a4NoticeImage(entry) {
