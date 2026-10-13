@@ -1177,10 +1177,8 @@
         ctx.fillStyle='#00716B';ctx.beginPath();ctx.arc(cx,cy-10,11,0,Math.PI*2);ctx.fill();
         ctx.beginPath();ctx.ellipse(cx,cy+16,22,14,0,Math.PI,0);ctx.fill();ctx.restore();
       }
-      watermark(960,86,115,.13);
-      watermark(960,365,90,.07);
       // Header
-      ctx.fillStyle='#dcefeb';ctx.fillRect(0,0,W,190);ctx.fillStyle='#006B68';ctx.fillRect(0,0,W,9);
+      ctx.fillStyle='#dcefeb';ctx.fillRect(0,0,W,190);ctx.fillStyle='#006B68';ctx.fillRect(0,0,W,9);watermark(960,86,115,.13);
       ctx.fillStyle=dark;ctx.font='700 42px Arial';ctx.fillText(entry.schoolName,65,38);
       ctx.font='28px Arial';ctx.fillStyle=muted;ctx.fillText('Thông báo khoản thu học sinh',65,96);
       if(entry.collectionPeriod){ctx.font='23px Arial';ctx.fillStyle=teal;ctx.fillText('Kỳ thu: '+entry.collectionPeriod,65,136);}
@@ -1194,7 +1192,7 @@
       ctx.fillText('Ngày sinh: '+(entry.student.BirthDate||'—'),160,352,825);
 
       // Total
-      ctx.fillStyle='#D8EFEA';ctx.fillRect(45,465,990,205);ctx.fillStyle='#C69B35';ctx.fillRect(45,465,7,205);
+      ctx.fillStyle='#D8EFEA';ctx.fillRect(45,465,990,205);ctx.fillStyle='#C69B35';ctx.fillRect(45,465,7,205);watermark(945,563,90,.09);
       ctx.fillStyle=dark;ctx.font='700 32px Arial';ctx.fillText('TỔNG PHẢI NỘP',90,505);
       ctx.fillStyle=teal;ctx.font='600 45px Arial';ctx.fillText(moneyNotice(entry.total),90,564);
       ctx.fillStyle='#b6403a';ctx.font='700 28px Arial';ctx.textAlign='right';ctx.fillText('Hạn nộp: '+noticeDate(entry.deadline),990,555);ctx.textAlign='left';
