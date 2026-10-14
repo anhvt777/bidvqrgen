@@ -691,8 +691,10 @@
       return result;
     }
 
-    function prepareQrImage(item, loadedQrImage = null) {
-      if (isValidQrDataUrl(item.imageData) || (item.qrOriginalFallback && item.imageData===item.url)) return Promise.resolve(item.imageData);
+    function prepareQrImage(item, loadedQrImage = null, allowOriginalFallback = true) {
+      if (isValidQrDataUrl(item.imageData)) return Promise.resolve(item.imageData);
+      if (allowOriginalFallback && item.qrOriginalFallback && item.imageData===item.url) return Promise.resolve(item.imageData);
+      if (!allowOriginalFallback && item.qrOriginalFallback){item.imageData=null;item.imagePromise=null;item.qrOriginalFallback=false;}
       item.imageData=null;
       if (!item.imagePromise) {
         const qrImagePromise = loadedQrImage && loadedQrImage.complete && loadedQrImage.naturalWidth && loadedQrImage.src===item.url ? Promise.resolve(loadedQrImage) : loadImage(item.url);
@@ -706,7 +708,8 @@
           // Firefox/privacy settings can return "data:," from a valid canvas.
           // The original VietQR is already built from this exact Excel row.
           // Retain a working payment QR rather than displaying a broken image.
-          console.warn('Không xuất được ảnh ghép logo, sử dụng QR thanh toán gốc:', error);
+          if(!allowOriginalFallback)throw new Error('Không thể xuất ảnh QR có logo trường/BIDV: '+error.message+'. Trình duyệt có thể đang chặn xuất canvas; hãy cho phép quyền canvas hoặc thử trình duyệt khác. Không tự thay bằng QR VietQR gốc.');
+          console.warn('Không xuất được ảnh ghép logo, dùng QR gốc cho thông báo:',error);
           await loadImage(item.url);
           item.imageData=item.url;
           item.qrOriginalFallback=true;
@@ -744,7 +747,7 @@
             if (item.imageData || item.composingPreview) return;
             item.composingPreview = true;
             try {
-              item.imageData = await prepareQrImage(item, image);
+              item.imageData = await prepareQrImage(item, image, false);
               image.src = item.imageData;
               link.href = item.imageData;
             } catch (err) {
@@ -758,19 +761,21 @@
               item.composingPreview = false;
             }
           };
-          // Không ghép sẵn hàng trăm canvas PNG khi vừa nạp Excel.
-          // Chỉ ghép khi tải riêng, in thông báo hoặc xuất ZIP để tránh cạn bộ nhớ.
+          // Lazy gallery: compose only when the QR enters the viewport.
           image.crossOrigin = 'anonymous';
+          image.addEventListener('load', composePreview, {once:true});
           image.src = item.url;
+          if(image.complete && image.naturalWidth)composePreview();
         } else {
           image.src = item.imageData;
         }
-        link.href = item.imageData || item.url;
+        if(isValidQrDataUrl(item.imageData))link.href=item.imageData;
+        else link.removeAttribute('href');
         link.addEventListener('click', async event => {
-          if (item.imageData) return;
+          if (isValidQrDataUrl(item.imageData)) return;
           event.preventDefault();
           try {
-            item.imageData = await prepareQrImage(item, image.complete && image.naturalWidth ? image : null);
+            item.imageData = await prepareQrImage(item, image.complete && image.naturalWidth && image.src===item.url ? image : null, false);
             link.href = item.imageData;
             link.click();
           } catch (err) {
@@ -1382,16 +1387,11 @@
       let added = 0;
       for (const qr of items) {
         try {
-          const dataUrl = await prepareQrImage(qr);
+          const dataUrl = await prepareQrImage(qr,null,false);
           const folder = zip.folder(safePathSegment(qr.Class || 'Khong lop'));
           let blob;
           if(isValidQrDataUrl(dataUrl)) blob=dataURLToBlob(dataUrl);
-          else if(dataUrl===qr.url){
-            const response=await fetch(qr.url,{mode:'cors'});
-            if(!response.ok)throw new Error('Không tải được ảnh QR gốc: HTTP '+response.status);
-            blob=await response.blob();
-            if(!blob.type.startsWith('image/')||blob.size<100)throw new Error('Ảnh QR gốc tải về không hợp lệ.');
-          }else throw new Error('Ảnh QR không hợp lệ.');
+          else throw new Error('Ảnh QR ghép logo không hợp lệ; dừng ZIP, không thay bằng QR gốc.');
           folder.file(qr.filename, blob);
           // ZIP đã giữ Blob; không lưu hàng trăm data URL lớn trong RAM.
           qr.imageData=null;
