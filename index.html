@@ -532,7 +532,7 @@
           if (!AccountNumber || !BankBin) continue;
 
           const displayName = formatStudentQrName(AccountName, Class);
-          const qrUrl = `https://img.vietqr.io/image/${BankBin}-${AccountNumber}-compact2.png?amount=${Amount || ''}&addInfo=${encodeURIComponent(Remark || '')}&accountName=${encodeURIComponent(displayName)}`;
+          const qrUrl = `https://img.vietqr.io/image/${BankBin}-${AccountNumber}-compact2.svg?amount=${Amount || ''}&addInfo=${encodeURIComponent(Remark || '')}&accountName=${encodeURIComponent(displayName)}`;
 
           const item = {
             url: qrUrl,
@@ -1417,20 +1417,57 @@
       saveAs(content, zipName);
     }
 
-    function loadImage(url) {
+    // VietQR Quicklink: one outstanding request at a time, paced below published
+    // 10 requests / 10 seconds / IP. Shared promise cache prevents duplicate loads
+    // across preview, notices and ZIP. Failed requests are evicted for a later retry.
+    const vietqrImageCache = new Map();
+    let vietqrRequestQueue = Promise.resolve();
+    let vietqrLastRequestAt = 0;
+    function loadImageOnce(url) {
       return new Promise((resolve, reject) => {
         const img = new Image();
-        // Data URL là ảnh nhúng sẵn trong trang, không yêu cầu CORS.
-        // Chỉ bật CORS cho ảnh VietQR từ máy chủ bên ngoài để canvas có thể xuất PNG.
-        if (!String(url).startsWith('data:')) img.crossOrigin = "anonymous";
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error(String(url).startsWith('data:')
-          ? 'Không tải được logo đã nhúng trong trang.'
-          : 'Không tải được ảnh VietQR từ máy chủ. Kiểm tra kết nối hoặc CORS.'));
+        if (!String(url).startsWith('data:')) img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          if (!img.naturalWidth || !img.naturalHeight) reject(new Error('Ảnh trả về rỗng.'));
+          else resolve(img);
+        };
+        img.onerror = () => reject(new Error('Không tải được ảnh: '+String(url).split('?')[0]+'. Có thể do CORS hoặc phản hồi máy chủ.'));
         img.src = url;
       });
     }
-
+    function paceVietqrRequest(job) {
+      const run = async () => {
+        const delay = Math.max(0, 1250 - (Date.now() - vietqrLastRequestAt));
+        if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+        vietqrLastRequestAt = Date.now();
+        return job();
+      };
+      const result = vietqrRequestQueue.then(run,run);
+      vietqrRequestQueue = result.catch(() => {});
+      return result;
+    }
+    function loadImage(url) {
+      if (!/^https:\/\/img\.vietqr\.io\/image\//i.test(String(url))) return loadImageOnce(url);
+      if (vietqrImageCache.has(url)) return vietqrImageCache.get(url);
+      const promise = paceVietqrRequest(async () => {
+        try { return await loadImageOnce(url); }
+        catch (firstError) {
+          // The PNG endpoint remains a fallback during VietQR's SVG transition.
+          const fallback = url.replace(/\.svg(\?)/i,'.png$1');
+          if (fallback === url) throw firstError;
+          try { await new Promise(resolve => setTimeout(resolve, 1250)); vietqrLastRequestAt = Date.now(); return await loadImageOnce(fallback); }
+          catch (secondError) { throw new Error('Cả SVG và PNG VietQR đều không tải được. SVG: '+firstError.message+' PNG: '+secondError.message); }
+        }
+      });
+      vietqrImageCache.set(url,promise);
+      promise.catch(() => vietqrImageCache.delete(url));
+      // Bound retained decoded images; pending entries are not evicted.
+      if (vietqrImageCache.size > 120) {
+        const oldest = vietqrImageCache.keys().next().value;
+        if (oldest !== url) vietqrImageCache.delete(oldest);
+      }
+      return promise;
+    }
     function isValidQrDataUrl(value) { return typeof value==='string' && value.startsWith('data:image/png;base64,') && value.length>100; }
     function dataURLToBlob(dataUrl) {
       if(typeof dataUrl!=='string'||!/^data:image\/(png|jpeg);base64,/.test(dataUrl))throw new Error('Dữ liệu ảnh PNG/JPG không hợp lệ.');
