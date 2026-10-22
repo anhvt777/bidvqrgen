@@ -762,10 +762,10 @@
             }
           };
           // Lazy gallery: compose only when the QR enters the viewport.
-          image.crossOrigin = 'anonymous';
-          image.addEventListener('load', composePreview, {once:true});
-          image.src = item.url;
-          if(image.complete && image.naturalWidth)composePreview();
+          // Do not fire an unpaced direct browser request per visible row.
+          // Preparation uses the shared, throttled VietQR loader instead.
+          image.alt = 'Đang tạo QR ' + (item.DisplayName || item.AccountName || '');
+          composePreview();
         } else {
           image.src = item.imageData;
         }
