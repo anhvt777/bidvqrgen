@@ -355,7 +355,7 @@
 <div class="bi-actions"><button id="biPreview">Xem trước</button><button id="biPdf">Xuất PDF theo lớp</button><button id="biImages">Xuất ảnh theo lớp</button><button id="biExport">Xuất cả ảnh + PDF (ZIP)</button><button id="biCancel" hidden>Hủy xuất</button></div><p id="biProgress" role="status" aria-live="polite"></p>
 <p class="bi-note">Mỗi trang có tối đa 2 QR để giữ mã rõ khi in A5. Nhóm có nhiều lựa chọn sẽ có nhiều trang; chỉ chọn 1 QR trong toàn nhóm. Web không nhận trạng thái thanh toán, không đăng ký định danh và không khóa QR đã gửi.</p>
 </article><article class="bi-card"><h3>Mẫu A5 · Chọn một QR trong nhóm</h3><div class="bi-pager"><button id="biPrev" disabled>‹ Trước</button><span id="biPage">Chưa có thông báo</span><button id="biNext" disabled>Sau ›</button></div><div id="biCanvas"><p>Chọn dữ liệu và bấm Xem trước.</p></div></article></div></section>
-<div id="qrs"></div>
+<div id="qrPaging" style="margin:12px 0;display:none;align-items:center;gap:12px;flex-wrap:wrap"><button type="button" id="qrPrev">◀ Trang trước</button><span id="qrPageInfo"></span><button type="button" id="qrNext">Trang sau ▶</button></div><div id="qrExportStatus" role="status" aria-live="polite" style="padding:8px 0"></div><div id="qrs"></div>
 
     
     <div id="noticePrintRoot" aria-hidden="true"></div>
@@ -719,12 +719,25 @@
       return item.imagePromise;
     }
 
-    function renderQR(list) {
+    // Keep large student files responsive: render only one small page of QR cards.
+    const qrPageSize = 24;
+    let qrCurrentPage = 0, qrVisibleRows = [];
+    document.getElementById('qrPrev').addEventListener('click', () => {qrCurrentPage--;renderQR(qrVisibleRows,true);});
+    document.getElementById('qrNext').addEventListener('click', () => {qrCurrentPage++;renderQR(qrVisibleRows,true);});
+    function renderQR(list, keepPage=false) {
+      if(!keepPage)qrCurrentPage=0;
+      qrVisibleRows=list;
+      const totalPages=Math.max(1,Math.ceil(list.length/qrPageSize));
+      qrCurrentPage=Math.max(0,Math.min(totalPages-1,qrCurrentPage));
+      document.getElementById('qrPaging').style.display=list.length>qrPageSize?'flex':'none';
+      document.getElementById('qrPageInfo').textContent=(list.length?('Hiển thị '+(qrCurrentPage*qrPageSize+1)+'–'+Math.min(list.length,(qrCurrentPage+1)*qrPageSize)+' / '+list.length+' khoản thu; trang '+(qrCurrentPage+1)+'/'+totalPages):'Không có dữ liệu');
+      document.getElementById('qrPrev').disabled=qrCurrentPage===0;
+      document.getElementById('qrNext').disabled=qrCurrentPage>=totalPages-1;
       const container = document.getElementById('qrs');
       container.innerHTML = "";
       qrList = [];
 
-      list.forEach(item => {
+      list.slice(qrCurrentPage*qrPageSize,(qrCurrentPage+1)*qrPageSize).forEach(item => {
         qrList.push(item);
 
         const div = document.createElement('div');
@@ -765,7 +778,7 @@
           // Do not fire an unpaced direct browser request per visible row.
           // Preparation uses the shared, throttled VietQR loader instead.
           image.alt = 'Đang tạo QR ' + (item.DisplayName || item.AccountName || '');
-          composePreview();
+          // Only QR on the current page enters the request queue.\n          composePreview();
         } else {
           image.src = item.imageData;
         }
@@ -1385,6 +1398,11 @@
       const zip = new JSZip();
       const failures = [];
       let added = 0;
+      const status=document.getElementById('qrExportStatus');
+      status.textContent='Bắt đầu xuất '+items.length+' QR. Có thể tải theo lớp để nhận tệp nhỏ nhanh hơn.';
+      const buttons=[document.getElementById('downloadAll'),document.getElementById('downloadClass')];
+      buttons.forEach(b=>b.disabled=true);
+      try {
       for (const qr of items) {
         try {
           const dataUrl = await prepareQrImage(qr,null,false);
@@ -1397,6 +1415,10 @@
           qr.imageData=null;
           qr.imagePromise=null;
           added++;
+          if(added%5===0 || added===items.length) {
+            status.textContent='Đang tạo QR: '+added+'/'+items.length+' ('+Math.round(added/items.length*100)+'%). Không đóng tab.';
+            await new Promise(resolve=>setTimeout(resolve,0));
+          }
         } catch (err) {
           const reason = err && err.message ? err.message : String(err);
           failures.push(qr.filename + ': ' + reason);
@@ -1404,17 +1426,21 @@
         }
       }
       if (failures.length) {
+        status.textContent='Xuất thất bại: '+failures.length+' QR. Không xuất ZIP thiếu dữ liệu.';
         const firstFailure = failures[0];
         alert('Dừng xuất ZIP để tránh tạo tệp thiếu ảnh. Tạo được ' + added + '/' + items.length +
           ' ảnh. Lỗi đầu tiên: ' + firstFailure);
         return;
       }
       if (!added) {
+        status.textContent='Không tạo được QR nào.';
         alert('Không tạo được ảnh QR nên ZIP không được xuất.');
         return;
       }
       const content = await zip.generateAsync({type: 'blob', compression: 'STORE'});
       saveAs(content, zipName);
+      status.textContent='Hoàn tất '+added+'/'+items.length+' QR: '+zipName;
+      } finally { buttons.forEach(b=>b.disabled=false); }
     }
 
     // VietQR Quicklink: one outstanding request at a time, paced below published
