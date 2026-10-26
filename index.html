@@ -778,7 +778,8 @@
           // Do not fire an unpaced direct browser request per visible row.
           // Preparation uses the shared, throttled VietQR loader instead.
           image.alt = 'Đang tạo QR ' + (item.DisplayName || item.AccountName || '');
-          // Only QR on the current page enters the request queue.\n          composePreview();
+          // Only QR on the current page enters the request queue.
+          composePreview();
         } else {
           image.src = item.imageData;
         }
