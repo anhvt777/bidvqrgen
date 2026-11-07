@@ -32,7 +32,9 @@
     if(!rows.length){status.textContent='Hãy tải Excel tạo QR trước.';return}
     const candidates=[],held=[],refs=new Set();
     for(let i=0;i<rows.length;i++){
-      const x=rows[i], account=clean(x.AccountNumber),bin=clean(x.BankBin),remark=clean(x.Remark),person=clean(x.StudentName||x.AccountName),klass=clean(x.Class),fee=clean(x.FeeName),studentId=clean(x.StudentID);
+      const x=rows[i], account=clean(x.AccountNumber),bin=clean(x.BankBin),remark=clean(x.Remark),klass=clean(x.Class),fee=clean(x.FeeName),studentId=clean(x.StudentID);
+      let person=clean(x.StudentName||x.AccountName);
+      if(!clean(x.StudentName)&&klass&&normalize(person).endsWith(' '+normalize(klass)))person=person.slice(0,person.lastIndexOf(' ')).trim();
       try{
         const amount=money(x.Amount),accountName=clean(x.AccountName);
         if(!person||!klass||!fee||!accountName)throw Error('Thiếu họ tên/lớp/khoản thu/tên tài khoản');
