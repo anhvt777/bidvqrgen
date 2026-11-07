@@ -27,7 +27,7 @@
       return image.slice('data:image/png;base64,'.length);
     }finally{h.remove()}
   }
-  async function save(){
+  async function save(downloadFile=true){
     const status=$('portalQrExportStatus');
     if(!rows.length){status.textContent='Hãy tải Excel tạo QR trước.';return}
     const candidates=[],held=[],refs=new Set();
@@ -46,16 +46,34 @@
     }
     if(!candidates.length){status.textContent='Không có dòng QR hợp lệ. '+held.length+' dòng cần sửa.';return}
     const data={schema:'bidvqrgen-parent-qr-manifest/1',school_id:'TRUNGVUONG',status:'UNVERIFIED_QR_DRAFT',generated_at:new Date().toISOString(),source:'bidvqrgen',rows:candidates,held};
-    const blob=new Blob([JSON.stringify(data)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
-    a.href=url;a.download='TRUNGVUONG_QR_CHUA_XAC_MINH_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
-    status.textContent='Đã xuất '+candidates.length+' QR chưa xác minh, giữ lại '+held.length+' dòng. Không đưa JSON lên GitHub. Tại Cloudflare phải đối chiếu và xác minh bằng app BIDV trước khi công bố.';
+    if(downloadFile){const blob=new Blob([JSON.stringify(data)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='TRUNGVUONG_QR_CHUA_XAC_MINH_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+    status.textContent=(downloadFile?'Đã xuất ':'Đã chuẩn bị ')+candidates.length+' QR chưa xác minh, giữ lại '+held.length+' dòng. Tại Cloudflare phải đối chiếu và xác minh bằng app BIDV trước khi công bố.';return data;
   }
   document.addEventListener('bidvqrgen:data-loaded',e=>{
     rows=Array.isArray(e.detail?.rows)?e.detail.rows:[];const b=$('portalQrManifestExport');
     if(b)b.disabled=!rows.length;
+    const c=$('portalQrConnect');if(c)c.disabled=!rows.length;
     const status=$('portalQrExportStatus');if(status)status.textContent=rows.length+' dòng QR sẵn sàng đối chiếu, chưa được công bố.';
   });
-  document.addEventListener('DOMContentLoaded',()=>{$('portalQrManifestExport')?.addEventListener('click',()=>save().catch(e=>{$('portalQrExportStatus').textContent='Không thể xuất danh mục QR: '+e.message}))});
+  async function connectPortal(){
+    const target='https://school-parent-dev.tuananh0001.workers.dev',popup=window.open(target+'/admin/qr-review','schoolParentQrReview');
+    if(!popup){$('portalQrExportStatus').textContent='Trình duyệt chặn cửa sổ mới. Hãy cho phép pop-up.';return}
+    let data;
+    try{data=await save(false)}catch(e){popup.close();$('portalQrExportStatus').textContent='Không thể chuẩn bị QR: '+e.message;return}
+    const listener=ev=>{
+      if(ev.origin!==target||ev.source!==popup||ev.data?.type!=='BIDV_QR_PORTAL_READY'||!(/^[a-f0-9]{40}$/).test(ev.data.challenge||''))return;
+      window.removeEventListener('message',listener);
+      popup.postMessage({type:'BIDV_QR_PORTAL_DRAFT',challenge:ev.data.challenge,manifest:data},target);
+      $('portalQrExportStatus').textContent='Đã chuyển '+data.rows.length+' QR sang trang quản trị. Chưa công bố; cán bộ kiểm tra từng mã và quét xác minh.';
+    };
+    window.addEventListener('message',listener);
+    popup.postMessage({type:'BIDV_QR_PORTAL_HELLO'},target);
+    $('portalQrExportStatus').textContent='Đang mở xác thực Cloudflare Access. Sau đăng nhập, dữ liệu được chuyển qua cửa sổ quản trị.';
+  }
+  document.addEventListener('DOMContentLoaded',()=>{
+    $('portalQrManifestExport')?.addEventListener('click',()=>save().catch(e=>{$('portalQrExportStatus').textContent='Không thể xuất danh mục QR: '+e.message}));
+    $('portalQrConnect')?.addEventListener('click',()=>connectPortal().catch(e=>{$('portalQrExportStatus').textContent='Kết nối lỗi: '+e.message}));
+  });
   // Optional pure test hooks for local Node checks only.
   if(typeof module!=='undefined'&&module.exports)module.exports={emv,money,tag,crc};
 })();
