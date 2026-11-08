@@ -43,7 +43,8 @@
         if(refs.has(key))throw Error('Trùng cùng BIN + tài khoản + nội dung');
         refs.add(key);
         const payload=emv(bin,account,accountName,amount,remark);
-        candidates.push({student_id:studentId,student_name:person,class_name:klass,charge_name:fee,fee_code:clean(x.FeeCode),amount,bank_bin:bin,account_number:account,account_name:accountName,remark,qr_payload:payload,qr_png_base64:exportQR(payload)});
+        if(typeof window.bidvQrPortalRenderBranded!=='function')throw Error('Bộ vẽ QR logo chưa tải; vui lòng Ctrl+F5');
+        candidates.push({student_id:studentId,student_name:person,class_name:klass,charge_name:fee,fee_code:clean(x.FeeCode),amount,bank_bin:bin,account_number:account,account_name:accountName,remark,qr_payload:payload,qr_png_base64:await window.bidvQrPortalRenderBranded(payload,x)});
       }catch(e){held.push({row:i+1,reason:String(e.message).slice(0,160)})}
     }
     if(!candidates.length){status.textContent='Không có dòng QR hợp lệ. '+held.length+' dòng cần sửa.';return}
