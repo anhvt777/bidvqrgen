@@ -5,14 +5,9 @@
   const clean=x=>String(x??'').trim();
   const normalize=x=>clean(x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toUpperCase().replace(/[^A-Z0-9 _.-]/g,' ').replace(/\s+/g,' ').trim();
   function money(v){const x=clean(v).replace(/[\s₫đ]/g,'');const y=/^\d+$/.test(x)?x:/^\d{1,3}([.,]\d{3})+$/.test(x)?x.replace(/[.,]/g,''):'NaN';const n=Number(y);if(!Number.isSafeInteger(n)||n<=0||n>999999999)throw Error('Số tiền không hợp lệ: '+clean(v));return n}
-  function tag(id,v){v=String(v);if(v.length>99)throw Error('QR vượt giới hạn thẻ '+id);return id+String(v.length).padStart(2,'0')+v}
-  function crc(s){let c=0xffff;for(let i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=c&0x8000?(c<<1)^0x1021:c<<1;c&=0xffff}return c.toString(16).toUpperCase().padStart(4,'0')}
   function emv(bin,account,name,amount,remark){
-    if(!/^\d{6}$/.test(bin)||!/^[A-Za-z0-9]{4,34}$/.test(account))throw Error('BIN hoặc số tài khoản định danh chưa hợp lệ');
-    if(!/^[A-Za-z0-9 _.-]{1,95}$/.test(remark))throw Error('Nội dung QR phải là chữ/số không dấu tối đa 95 ký tự');
-    const info=tag('00','A000000727')+tag('01',tag('00',bin)+tag('01',account))+tag('02','QRIBFTTA');
-    let s='000201010212'+tag('38',info)+'52040000'+'5303704'+tag('54',String(amount))+'5802VN'+tag('59',normalize(name).slice(0,25))+tag('60','VIETNAM')+tag('62',tag('08',remark))+'6304';
-    return s+crc(s)
+    if(!window.BIDVQREngine)throw Error('Chưa tải được BIDV QR Engine V1');
+    return window.BIDVQREngine.generate({bankBin:bin,accountNumber:account,accountName:name,amount,remark});
   }
   function exportQR(payload){
     const h=document.createElement('div');h.style.cssText='position:fixed;left:-10000px;top:0';
@@ -48,7 +43,7 @@
       }catch(e){held.push({row:i+1,reason:String(e.message).slice(0,160)})}
     }
     if(!candidates.length){status.textContent='Không có dòng QR hợp lệ. '+held.length+' dòng cần sửa.';return}
-    const data={schema:'bidvqrgen-parent-qr-manifest/1',school_id:'TRUNGVUONG',status:'UNVERIFIED_QR_DRAFT',generated_at:new Date().toISOString(),source:'bidvqrgen',rows:candidates,held};
+    const data={qr_engine_version:window.BIDVQREngine.version,schema:'bidvqrgen-parent-qr-manifest/1',school_id:'TRUNGVUONG',status:'UNVERIFIED_QR_DRAFT',generated_at:new Date().toISOString(),source:'bidvqrgen',rows:candidates,held};
     if(downloadFile){const blob=new Blob([JSON.stringify(data)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='TRUNGVUONG_QR_CHUA_XAC_MINH_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
     status.textContent=(downloadFile?'Đã xuất ':'Đã chuẩn bị ')+candidates.length+' QR chưa xác minh, giữ lại '+held.length+' dòng. Tại Cloudflare phải đối chiếu và xác minh bằng app BIDV trước khi công bố.';return data;
   }
