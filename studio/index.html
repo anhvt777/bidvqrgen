@@ -749,9 +749,9 @@
       if (item.imagePromise) return item.imagePromise;
       item.imagePromise = (async () => {
         if (!window.BIDVQREngine || !window.BIDVQRBrand) throw Error('Thiếu BIDV QR Engine / Renderer nội bộ.');
-        const original=String(item.Amount ?? '').trim().replace(/[\\s₫đ]/g,'');
-        const numeric=/^\\d+$/.test(original) ? original :
-          /^\\d{1,3}([.,]\\d{3})+$/.test(original) ? original.replace(/[.,]/g,'') : null;
+        const original=String(item.Amount ?? '').trim().replace(/[\s₫đ]/g,'');
+        const numeric=/^\d+$/.test(original) ? original :
+          /^\d{1,3}([.,]\d{3})+$/.test(original) ? original.replace(/[.,]/g,'') : null;
         const amount=Number(numeric);
         if (!numeric || !Number.isSafeInteger(amount) || amount<=0) throw Error('Số tiền không hợp lệ: '+item.Amount);
         const data={bankBin:item.BankBin,accountNumber:item.AccountNumber,
