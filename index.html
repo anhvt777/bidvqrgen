@@ -612,6 +612,53 @@
       return brandingImagesPromise;
     }
 
+
+    // Render from the same EMV payload exported to Cloudflare, without any external QR image service.
+    // Keep quiet zone and bank mark small enough for high-error-correction QR modules.
+    async function portalBrandedQR(payload, item) {
+      if(typeof QRCode==='undefined')throw Error('Thiếu thư viện QR nội bộ.');
+      const tmp=document.createElement('div');
+      tmp.style.cssText='position:fixed;left:-10000px;top:0';
+      document.body.appendChild(tmp);
+      try {
+        const instance=new QRCode(tmp,{text:payload,width:380,height:380,correctLevel:QRCode.CorrectLevel.H});
+        const matrix=instance._oQRCode;
+        if(!matrix)throw Error('Không có ma trận QR');
+        const n=matrix.getModuleCount(),scale=Math.floor(408/(n+8));
+        if(scale<3)throw Error('Payload QR quá dài cho mẫu QR có logo');
+        const canvas=document.createElement('canvas');canvas.width=480;canvas.height=600;
+        const c=canvas.getContext('2d');
+        c.fillStyle='#fff';c.fillRect(0,0,480,600);
+        c.fillStyle='#007e75';c.fillRect(0,0,480,6);
+        const [brand]=await loadBrandingImages();
+        const school=item.schoolLogoData?await loadImage(item.schoolLogoData):null;
+        function place(img,cx,cy,max){if(!img)return;const width=img.naturalWidth||img.width,height=img.naturalHeight||img.height;const ratio=Math.min(max/width,max/height);c.drawImage(img,cx-width*ratio/2,cy-height*ratio/2,width*ratio,height*ratio)}
+        if(school){place(school,173,46,57);place(brand,298,46,53)}
+        else place(brand,240,46,59);
+        c.fillStyle='#193d43';c.textAlign='center';c.font='bold 14px Arial';
+        c.fillText('BIDV  |  QR THANH TOAN',240,86);
+        const size=(n+8)*scale,startX=Math.round((480-size)/2),startY=102;
+        c.fillStyle='#fff';c.fillRect(startX-2,startY-2,size+4,size+4);
+        c.fillStyle='#15242a';
+        for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(matrix.isDark(y,x))c.fillRect(startX+(x+4)*scale,startY+(y+4)*scale,scale,scale);
+        const middleX=startX+size/2,middleY=startY+size/2,logoSize=Math.min(43,Math.floor(n*scale*0.12));
+        c.fillStyle='#fff';c.beginPath();c.roundRect(middleX-logoSize/2-3,middleY-logoSize/2-3,logoSize+6,logoSize+6,6);c.fill();
+        place(brand,middleX,middleY,logoSize);
+        c.fillStyle='#153c41';
+        const display=String(item.DisplayName||item.AccountName||'').replace(/\s+/g,' ').trim();
+        function fit(text,maxWidth,fontSize){while(fontSize>11){c.font='600 '+fontSize+'px Arial';if(c.measureText(text).width<=maxWidth)break;fontSize--}return fontSize}
+        const baseY=startY+size+23;
+        c.font='600 '+fit(display,442,19)+'px Arial';c.fillText(display,240,baseY);
+        c.fillStyle='#006b64';c.font='bold 16px Arial';
+        c.fillText('So tien: '+Number(String(item.Amount||0).replace(/\D/g,'')).toLocaleString('vi-VN')+' VND',240,baseY+28);
+        c.fillStyle='#66777b';c.font='12px Arial';c.fillText('Kiem tra thong tin nguoi thu huong tren ung dung ngan hang',240,baseY+51);
+        const output=canvas.toDataURL('image/png');
+        if(!output.startsWith('data:image/png;base64,')||output.length>175000)throw Error('Anh QR co logo vuot gioi han an toan');
+        return output.slice(22);
+      } finally {tmp.remove()}
+    }
+    window.bidvQrPortalRenderBranded=portalBrandedQR;
+
     function composeQrImage(sourceImage, displayName, amount, schoolLogo, bidvMark) {
       const width = sourceImage.naturalWidth || sourceImage.width;
       const height = sourceImage.naturalHeight || sourceImage.height;
