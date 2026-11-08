@@ -38,12 +38,12 @@
         if(refs.has(key))throw Error('Trùng cùng BIN + tài khoản + nội dung');
         refs.add(key);
         const payload=emv(bin,account,accountName,amount,remark);
-        if(typeof window.bidvQrPortalRenderBranded!=='function')throw Error('Bộ vẽ QR logo chưa tải; vui lòng Ctrl+F5');
-        candidates.push({student_id:studentId,student_name:person,class_name:klass,charge_name:fee,fee_code:clean(x.FeeCode),amount,bank_bin:bin,account_number:account,account_name:accountName,remark,qr_payload:payload,qr_png_base64:await window.bidvQrPortalRenderBranded(payload,x)});
+        if(!window.BIDVQRBrand||!window.BIDVQREngine)throw Error('BIDV QR Engine / Renderer V1 chưa tải; vui lòng Ctrl+F5');
+        candidates.push({student_id:studentId,student_name:person,class_name:klass,charge_name:fee,fee_code:clean(x.FeeCode),amount,bank_bin:bin,account_number:account,account_name:accountName,remark,qr_payload:payload,qr_png_base64:(await window.BIDVQRBrand.render(payload,{label:x.DisplayName||x.AccountName,amount,schoolLogoData:x.schoolLogoData})).split(',')[1]});
       }catch(e){held.push({row:i+1,reason:String(e.message).slice(0,160)})}
     }
     if(!candidates.length){status.textContent='Không có dòng QR hợp lệ. '+held.length+' dòng cần sửa.';return}
-    const data={qr_engine_version:window.BIDVQREngine.version,schema:'bidvqrgen-parent-qr-manifest/1',school_id:'TRUNGVUONG',status:'UNVERIFIED_QR_DRAFT',generated_at:new Date().toISOString(),source:'bidvqrgen',rows:candidates,held};
+    const data={qr_engine_version:window.BIDVQREngine.version,qr_renderer_version:window.BIDVQRBrand.version,schema:'bidvqrgen-parent-qr-manifest/1',school_id:'TRUNGVUONG',status:'UNVERIFIED_QR_DRAFT',generated_at:new Date().toISOString(),source:'bidvqrgen',rows:candidates,held};
     if(downloadFile){const blob=new Blob([JSON.stringify(data)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='TRUNGVUONG_QR_CHUA_XAC_MINH_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
     status.textContent=(downloadFile?'Đã xuất ':'Đã chuẩn bị ')+candidates.length+' QR chưa xác minh, giữ lại '+held.length+' dòng. Tại Cloudflare phải đối chiếu và xác minh bằng app BIDV trước khi công bố.';return data;
   }
