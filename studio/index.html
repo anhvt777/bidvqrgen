@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BIDV QR Studio — Sinh QR độc lập</title>
+  <meta name="description" content="Sinh QR thanh toán trực tiếp qua BIDV QR Engine nội bộ, không dùng dịch vụ tạo ảnh VietQR.">
+  <style>.studio-ribbon{padding:10px 18px;background:#e3f5ef;color:#075c53;text-align:center;font:600 13px Arial}.studio-ribbon a{color:#075c53;text-decoration:underline}</style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f5f6fa; }
+    header {
+      background: #006B68; /* màu xanh ngọc bích BIDV */
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    header h1 { margin: 0; font-size: 22px; }
+    header p { margin: 5px 0; font-size: 14px; }
+
+    .marquee {
+      overflow: hidden;
+      position: relative;
+      height: 25px;
+      margin-top: 8px;
+    }
+    .marquee span {
+      display: inline-block;
+      white-space: nowrap;
+      position: absolute;
+      will-change: transform;
+      animation: marquee 30s linear infinite;
+      font-size: 14px;
+      font-weight: bold;
+      color: #FFC62F;
+    }
+    @keyframes marquee {
+      0%   { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    main { padding: 20px; }
+    #controls { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+    #upload, #search, #downloadAll {
+      flex: 1;
+      min-width: 200px;
+    }
+    #upload { padding: 6px; }
+    #search {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    #downloadAll {
+      background: #FFC62F;
+      border: none;
+      color: #006B68;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    #downloadAll:hover { background: #e6b22b; }
+    .class-export {
+      display: none;
+      flex: 1;
+      min-width: 300px;
+      gap: 8px;
+    }
+    #classSelect {
+      flex: 1;
+      min-width: 135px;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+      font-size: 14px;
+    }
+    #downloadClass {
+      flex: 1;
+      min-width: 155px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      background: #006B68;
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #downloadClass:disabled { opacity: .55; cursor: not-allowed; }
+    @media (max-width: 600px) {
+      .class-export { min-width: 100%; }
+      #classSelect, #downloadClass { min-width: 0; }
+    }
+    
+    #qrs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .qr-item {
+      border: 1px solid #ccc;
+      background: white;
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .qr-item img { display: block; margin: auto; max-width: 150px; width: 100%; height: auto; }
+    .qr-item a {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 13px;
+      text-decoration: none;
+      color: #0070f3;
+    }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 18px; }
+      header p, .marquee span { font-size: 12px; }
+    }
+
+    .mode-tabs{display:flex;gap:8px;margin-bottom:8px}
+    .mode-tab{border:1px solid #cfd9d7;background:#fff;color:#006B68;padding:10px 16px;border-radius:9px;font-weight:700;cursor:pointer}
+    .mode-tab.active{background:#006B68;color:#fff}
+    .mode-help{font-size:13px;color:#65706f;margin-bottom:14px}
+    .notice-tool{margin-top:10px;margin-bottom:18px}.notice-tool + #qrs{margin-top:22px;padding-top:18px;border-top:2px solid #dbe8e5}
+    .notice-grid{display:grid;grid-template-columns:minmax(320px,.78fr) minmax(540px,1.22fr);grid-template-areas:"output filter";gap:16px;align-items:start}.notice-card-output{grid-area:output;position:sticky;top:12px;z-index:3}.notice-card-filter{grid-area:filter}
+    .notice-card{background:#fff;border:1px solid #d8e1df;border-radius:14px;padding:16px;box-shadow:0 2px 7px rgba(0,0,0,.05)}
+    .notice-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+    .notice-card-head div{display:grid;gap:3px}.notice-card-head b{font-size:16px;color:#163b39}.notice-card-head small{font-size:12px;color:#758482}
+    .notice-card-head>span{font-size:11px;font-weight:700;color:#006B68;background:#e8f4f1;padding:5px 8px;border-radius:14px}
+    .notice-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .notice-fields label{display:grid;gap:6px;font-size:12px;font-weight:700;color:#35514f}
+    .notice-fields select,.notice-fields input,.notice-fields textarea{width:100%;box-sizing:border-box;border:1px solid #cfdad7;border-radius:8px;padding:9px;background:#fff;font:inherit}
+    .notice-fields textarea{resize:vertical}.notice-wide{grid-column:1/-1}
+    .notice-wide small{font-size:11px;font-weight:400;color:#778784}
+    .notice-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+    .notice-stats>div{background:#edf7f4;border:1px solid #d5e8e3;border-radius:10px;padding:10px}
+    .notice-stats span,.notice-stats strong{display:block}.notice-stats span{font-size:10px;color:#73827f}.notice-stats strong{font-size:17px;color:#006B68;margin-top:3px}
+    .template-option{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;border:1px solid #d4dddb;border-radius:11px;padding:12px;margin-bottom:9px;cursor:pointer}
+    .template-option.selected{border-color:#009484;background:#eef9f6}.template-option span b,.template-option span small{display:block}.template-option span small{font-size:11px;color:#798885;margin-top:3px}
+    .template-option em{font-style:normal;font-size:10px;font-weight:700;background:#e3f3ef;color:#006B68;padding:5px 7px;border-radius:7px}
+    .notice-actions{display:grid;gap:8px;margin-top:12px}.notice-actions button{padding:10px;border-radius:8px;border:1px solid #006B68;background:#006B68;color:#fff;font-weight:700;cursor:pointer}.notice-actions button:first-child{background:#fff;color:#006B68}
+    .notice-note{margin-top:12px;padding:10px;border-radius:9px;background:#f5f8f7;color:#687774;font-size:11px;line-height:1.45}
+    .notice-preview-card{margin-top:16px}.notice-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}.notice-empty{text-align:center;color:#7d8987;padding:24px}
+    .notice-a4{background:#fff;border:1px solid #d9e5e2;padding:22px 26px;color:#173d3a;font-family:Arial,sans-serif;box-sizing:border-box}
+    .notice-doc-header{display:grid;grid-template-columns:1fr 1.25fr;gap:24px;align-items:start}
+    .notice-school-block,.notice-national-block{text-align:center;display:grid;gap:4px}
+    .notice-school-block strong,.notice-national-block strong{font-size:11px;letter-spacing:.15px}
+    .notice-school-block b,.notice-national-block b{font-size:12px}
+    .notice-national-block span{display:block;width:92px;height:1px;background:#173d3a;margin:3px auto 0}
+    .notice-title-block{text-align:center;margin:18px 0 14px}.notice-title-block h1{font-size:22px;color:#006B68;margin:0 0 5px;letter-spacing:.3px}.notice-title-block p{font-size:10px;color:#6c7d7a;margin:0}.notice-title-meta{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:8px}.notice-title-meta span{font-size:9px;color:#385a56;background:#eef7f5;border:1px solid #d5e6e2;border-radius:14px;padding:5px 9px}.notice-title-meta span:last-child{color:#9c413b;background:#fff3f1;border-color:#f0d9d5}
+    .notice-student-panel{display:grid;grid-template-columns:2fr .65fr 1.05fr 1fr;border:1px solid #cfe0dc;border-radius:9px;overflow:hidden;background:#f8fcfb}
+    .notice-student-panel>div{padding:9px 10px;border-right:1px solid #dce8e5}.notice-student-panel>div:last-child{border-right:0}
+    .notice-student-panel span,.notice-student-panel strong{display:block}.notice-student-panel span{font-size:8px;color:#71827f;font-weight:700;letter-spacing:.25px;margin-bottom:4px}.notice-student-panel strong{font-size:11px;color:#173d3a}.notice-student-main strong{font-size:12px}
+    .notice-fee-section{margin-top:13px}.notice-section-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:6px}.notice-section-heading strong{font-size:11px;color:#155e59}.notice-section-heading span{font-size:9px;color:#a34842;background:#fff2f0;border:1px solid #f1d8d4;padding:4px 7px;border-radius:12px}
+    .notice-a4 table{width:100%;border-collapse:collapse;font-size:10px}.notice-a4 th,.notice-a4 td{border:1px solid #cddfdb;padding:6px 8px}.notice-a4 th{background:#eaf5f2;color:#28534f;font-size:9px;text-transform:uppercase;letter-spacing:.15px}.notice-a4 th:first-child,.notice-a4 td:first-child{text-align:center;width:42px}.notice-a4 th:last-child,.notice-a4 td:last-child{text-align:right;width:140px}
+    .notice-total td{font-weight:700;background:#e4f4f0}.notice-total td:last-child{background:#006B68;color:#fff;font-size:14px}
+    .notice-amount-words{display:flex;gap:6px;align-items:baseline;padding:7px 2px 0;font-size:9px;color:#566865}.notice-amount-words strong{color:#173d3a;font-style:italic}
+    .notice-payment-section{display:grid;grid-template-columns:290px 1fr;gap:20px;align-items:center;margin-top:13px;padding-top:13px;border-top:1.5px solid #dbe8e5}
+    .notice-qr-column{text-align:center}.notice-payment-label{font-size:9px;font-weight:700;color:#006B68;letter-spacing:.35px;margin-bottom:6px}
+    .notice-qr-grid{display:grid;grid-template-columns:1fr;gap:8px}.notice-qr-grid.multi{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .notice-qr-simple{text-align:center}.notice-qr-simple img{display:block;width:225px;max-width:100%;height:auto;margin:0 auto}.notice-qr-simple small{display:block;margin-top:5px;color:#275b58;font-size:8px;font-weight:700}.notice-qr-grid.multi .notice-qr-simple img{width:155px}.notice-qr-grid.multi .notice-qr-simple small{font-size:7px}.notice-a4:has(.notice-qr-grid.multi) .notice-payment-section{grid-template-columns:minmax(340px,1.15fr) minmax(220px,1fr);gap:12px}.notice-a4:has(.notice-qr-grid.multi) .notice-qr-grid.multi .notice-qr-simple img{width:190px}.notice-a4:has(.notice-qr-grid.multi) .notice-qr-grid.multi .notice-qr-simple small{font-size:9px}
+    .notice-guide{background:#f8fbfa;border:1px solid #d9e6e3;border-radius:10px;padding:12px 14px;font-size:9px;line-height:1.45}.notice-guide h2{font-size:13px;margin:0 0 7px;color:#006B68}.notice-guide ol{margin:0 0 8px 18px;padding:0}.notice-guide li{margin:4px 0}.notice-deadline-box{display:flex;justify-content:space-between;gap:8px;align-items:center;background:#fff2f0;border:1px solid #f1d5d1;border-radius:8px;padding:7px 9px}.notice-deadline-box span{font-size:8px;color:#7b6b69;text-transform:uppercase;font-weight:700}.notice-deadline-box strong{font-size:10px;color:#b23b35}.notice-final-message{margin:8px 0 0;color:#536764;border-top:1px dashed #d7e2df;padding-top:7px}
+    .notice-footer-row{display:flex;justify-content:flex-end;align-items:flex-start;margin-top:12px}.notice-signature-box{width:310px;text-align:center;display:grid;justify-items:center;gap:4px}.notice-signature-box i{font-size:9px;color:#53625f}.notice-signature-box strong{font-size:10px;letter-spacing:.2px}.notice-signature-space{width:100%;height:74px}.notice-signature-box span{font-size:10px;font-weight:700;min-height:12px}
+    @media(max-width:600px){.notice-student-panel{grid-template-columns:1fr 1fr}.notice-payment-section{grid-template-columns:1fr}.notice-footer-row{justify-content:stretch}.notice-signature-box{width:100%}}
+    .mobile-notice{max-width:430px;margin:auto;background:#f7fcfb;border:1px solid #d6e6e2;border-radius:22px;padding:14px;color:#17423f}.mobile-head{background:#e9f7f4;border-radius:14px;padding:14px}.mobile-head strong,.mobile-head span,.mobile-head small{display:block}.mobile-head strong{font-size:17px}.mobile-head span{font-size:12px;color:#687c79;margin-top:3px}.mobile-head small{font-size:10px;color:#006B68;margin-top:5px;font-weight:700}.mobile-student{background:#fff;border:1px solid #e0ebe8;border-radius:14px;padding:15px;margin-top:9px}.mobile-student b{display:block;font-size:18px;color:#173d3a;margin-bottom:7px}.mobile-student div{font-size:12px;color:#687b78;margin-top:4px}.mobile-total{background:#e0f5f2;border-radius:14px;padding:15px;margin-top:9px}.mobile-total span,.mobile-total strong,.mobile-total b{display:block}.mobile-total strong{font-size:24px;font-weight:600;color:#006B68;margin:5px 0}.mobile-total b{font-size:10px;color:#b7423d}.mobile-items{background:#fff;border:1px solid #dbe8e5;border-radius:14px;padding:12px;margin:9px 0}.mobile-items>div{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #edf2f1;font-size:11px}.mobile-items>div:last-child{border-bottom:0}.mobile-qr-preview{margin-top:12px;padding:12px 8px;background:#eef8f6;border:1px solid #d8e9e5;border-radius:16px;text-align:center}.mobile-qr-preview .notice-qr-simple img{width:320px;max-width:100%;height:auto;margin:0 auto}.mobile-qr-preview .notice-qr-simple small{display:block;margin-top:7px;font-size:11px;color:#006B68;font-weight:700}.mobile-note{margin-top:12px;background:#e7f3fb;color:#285b80;padding:12px 14px;border-radius:12px;font-size:11px;line-height:1.45}
+    #noticePrintRoot{display:none}
+    @media(max-width:850px){.notice-grid{grid-template-columns:1fr;grid-template-areas:"output" "filter"}.notice-card-output{position:static}.notice-preview{grid-template-columns:1fr 1fr}}
+    @media(max-width:600px){.notice-fields{grid-template-columns:1fr}.notice-wide{grid-column:auto}.notice-stats{grid-template-columns:1fr}.notice-preview{grid-template-columns:1fr}.notice-pay-grid{grid-template-columns:1fr}.notice-student-box{grid-template-columns:1fr 1fr}}
+    @media print{
+      body.printing-notices header,body.printing-notices main> :not(#noticePrintRoot){display:none!important}
+      body.printing-notices #noticePrintRoot{display:block!important}
+      body.printing-notices .notice-a4{width:190mm;min-height:277mm;box-sizing:border-box;border:0;padding:8mm 11mm;margin:0 auto;page-break-after:always}
+      body.printing-notices .notice-a4:last-child{page-break-after:auto}
+      body.printing-notices .notice-qr-simple img{width:54mm;height:auto;max-height:72mm}body.printing-notices .notice-signature-box{width:75mm;justify-self:end}body.printing-notices .notice-signature-space{height:26mm}
+      @page{size:A4 portrait;margin:6mm}
+    }
+
+
+    .notice-insurance2 .notice-student-panel{grid-template-columns:2fr .6fr 1fr}
+    .notice-insurance2 .notice-fee-section th:nth-child(3),.notice-insurance2 .notice-fee-section td:nth-child(3){width:110px;text-align:center}
+    .insurance2-summary{padding:9px 4px;font-size:11px;color:#205a55}
+    .insurance2-summary span{margin:0 12px;color:#a9b9b5}
+    .insurance2-qr-section{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+    .insurance2-card{border:1px solid #d7e4e0;border-radius:10px;padding:13px 9px;text-align:center;min-width:0}
+    .insurance2-card-title{font-weight:700;color:#006B68;font-size:13px}
+    .insurance2-tag{display:inline-block;font-weight:700;font-size:9px;margin:6px;padding:4px 10px;border-radius:12px}
+    .insurance2-tag.required{background:#e6f4ee;color:#116e4b}.insurance2-tag.optional{background:#fff3db;color:#936200}
+    .insurance2-card-amount{font-size:18px;color:#133c39;font-weight:700;margin-bottom:6px}
+    .insurance2-card img{width:210px;max-width:100%;height:auto;display:block;margin:0 auto}
+    .insurance2-card-help{font-size:10px;color:#345b57;margin:8px auto 0;line-height:1.35}
+    .insurance2-instructions{border:1px solid #d7e5e2;border-radius:10px;background:#f6fbfa;padding:12px 16px;font-size:10px;line-height:1.55}
+    .insurance2-instructions h2{font-size:13px;color:#006B68;margin:0 0 6px}
+    .insurance2-instructions ol{padding-left:18px;margin:0}
+    .insurance2-instructions li{margin:4px 0}
+    .insurance2-deadline{color:#a63a35;margin:8px 0 0}
+    @media(max-width:600px){.insurance2-qr-section{gap:7px}.insurance2-card{padding:8px 3px}.insurance2-card-title{font-size:10px}.insurance2-card-amount{font-size:13px}}
+    @media print{body.printing-notices .notice-insurance2 .insurance2-qr-section{grid-template-columns:1fr 1fr!important}body.printing-notices .notice-insurance2 .insurance2-card img{width:45mm;height:auto;max-height:none}}
+
+    /* A4: compact one-page layout, preserve both QR at readable size. */
+    @media print{
+      @page{size:A4 portrait;margin:5mm 6mm}
+      body.printing-notices #noticePrintRoot{display:block!important}
+      body.printing-notices .notice-a4{width:198mm;min-height:0;height:auto;box-sizing:border-box;padding:3mm 5mm;margin:0 auto;border:0;box-shadow:none;break-inside:avoid;page-break-inside:avoid;page-break-after:always}
+      body.printing-notices .notice-a4:last-child{page-break-after:auto}
+      body.printing-notices .notice-insurance2 .notice-title-block{margin:6px 0}
+      body.printing-notices .notice-insurance2 .notice-title-block h1{font-size:19px;margin:0 0 3px}
+      body.printing-notices .notice-insurance2 .notice-student-panel>div{padding:6px 8px}
+      body.printing-notices .notice-insurance2 .notice-fee-section{margin-top:7px}
+      body.printing-notices .notice-insurance2 .notice-fee-section th,body.printing-notices .notice-insurance2 .notice-fee-section td{padding:4px 6px}
+      body.printing-notices .notice-insurance2 .insurance2-summary{padding:5px 2px}
+      body.printing-notices .notice-insurance2 .insurance2-qr-section{gap:10px;margin:6px 0}
+      body.printing-notices .notice-insurance2 .insurance2-card{padding:7px 7px}
+      body.printing-notices .notice-insurance2 .insurance2-card-title{font-size:11px}
+      body.printing-notices .notice-insurance2 .insurance2-tag{margin:3px;padding:2px 7px}
+      body.printing-notices .notice-insurance2 .insurance2-card-amount{font-size:15px;margin-bottom:3px}
+      body.printing-notices .notice-insurance2 .insurance2-card img{width:43mm;height:auto;max-width:100%;max-height:none}
+      body.printing-notices .notice-insurance2 .insurance2-card-help{margin-top:3px;font-size:9px}
+      body.printing-notices .notice-insurance2 .insurance2-instructions{padding:7px 10px;font-size:9px;line-height:1.32}
+      body.printing-notices .notice-insurance2 .insurance2-instructions h2{font-size:11px;margin-bottom:3px}
+      body.printing-notices .notice-insurance2 .insurance2-instructions li{margin:2px 0}
+      body.printing-notices .notice-insurance2 .notice-final-message{margin-top:4px;padding-top:4px}
+      body.printing-notices .notice-insurance2 .notice-footer-row{margin-top:5px}
+      body.printing-notices .notice-insurance2 .notice-signature-space{height:15mm}
+    }
+    /* Image export uses exactly the A4 layout, not the mobile notification. */
+    .notice-image-stage{position:fixed;left:-12000px;top:0;width:794px;background:#fff;z-index:-1}
+    .notice-image-stage .notice-a4{width:794px;min-height:0;box-sizing:border-box;padding:22px 25px;margin:0;background:#fff}
+    .notice-image-stage .insurance2-qr-section{grid-template-columns:1fr 1fr}
+    .notice-image-stage .insurance2-card img{width:185px}
+    /* Compact 2-QR cards consistently in preview, A4 print and JPG export. */
+    .notice-insurance2 .insurance2-qr-section{align-items:stretch;margin:9px 0 8px}
+    .notice-insurance2 .insurance2-card{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:10px 9px 9px}
+    .notice-insurance2 .insurance2-card-title{margin-bottom:3px;line-height:1.25}
+    .notice-insurance2 .insurance2-tag{margin:3px 0 5px}
+    .notice-insurance2 .insurance2-card-amount{margin:2px 0 6px}
+    .notice-insurance2 .insurance2-card img{display:block;max-width:100%;height:auto;margin:0 auto}
+    @media print{body.printing-notices .notice-insurance2 .insurance2-card{padding:7px 8px 7px}body.printing-notices .notice-insurance2 .insurance2-qr-section{margin:6px 0}}
+    .notice-image-stage .notice-insurance2 .insurance2-card{padding:9px 8px 8px}
+
+    /* Clean BIDV-branded mobile notice; payment QR remains untouched. */
+    .mobile-notice{background:#f5fbf9;border-color:#cde5df;padding:13px}
+    .mobile-head{background:linear-gradient(120deg,#e4f4f0,#f3fbf8);border-left:4px solid #006b68}
+    .mobile-head strong{color:#005b60;line-height:1.25}
+    .mobile-student{border-color:#d4e9e3}.mobile-student b{color:#074b4b}
+    .mobile-total{background:#e8f6f2;border:1px solid #d5ebe5}
+    .mobile-items{border-color:#d5e8e3}.mobile-items>div span{font-weight:600;color:#174943}
+    .mobile-items>div strong{font-weight:600;color:#006b68}
+    .mobile-qr-preview{background:#fff;border-color:#cce6de}
+    .mobile-qr-preview .notice-qr-simple img{width:340px;max-width:100%}
+  </style>
+<link rel="stylesheet" href="insurance.css?v=20261006-choices">
+</head>
+<body>
+  <header>
+    <h1>PGD ĐƯỜNG 9 - BIDV QUẢNG TRỊ - QR thu hộ Trường học</h1>
+    <p>Tải file Excel để tạo QR thanh toán, tìm kiếm thông tin Học sinh để thanh toán các khoản phí</p>
+    <div class="marquee">
+      <span>🎉 BIDV ĐỒNG HÀNH CHUYỂN ĐỔI SỐ CÙNG NGÀNH GIÁO DỤC  -  Mọi chi tiết vui lòng liên hệ BIDV gần nhất để được hỗ trợ 🎉</span>
+    </div>
+  </header>
+
+  <div class="studio-ribbon">BIDV QR STUDIO · Sinh QR độc lập · <a href="../">Trang QR dự phòng</a></div>
+  <main>
+    <div class="mode-tabs" role="tablist" aria-label="Chọn chức năng">
+      <button class="mode-tab active" id="qrModeTab" type="button">▦ Tạo QR</button>
+      <button class="mode-tab" id="noticeModeTab" type="button">✉ Thông báo nộp tiền</button>
+      <button class="mode-tab" id="insuranceModeTab" type="button">▦ Thông báo lựa chọn QR</button>
+    </div>
+    <div class="mode-help" id="modeHelp">Tải file Excel một lần, sau đó thao tác Thông báo nộp tiền ở phía trên; danh sách QR chi tiết hiển thị phía dưới.</div>
+    <section class="portal-qr-export" style="margin:12px 0;padding:16px;background:#eaf6f2;border:1px solid #b7d4cb;border-radius:10px"><strong>Kết nối cổng phụ huynh (Trưng Vương – thử nghiệm)</strong><p>Xuất danh mục QR đã tạo từ file Excel, giữ nguyên tài khoản định danh và nội dung thanh toán. Dữ liệu chỉ tải xuống máy, chưa gửi lên internet, chưa phải QR được xác minh.</p><button type="button" id="portalQrManifestExport" disabled>Xuất danh mục QR để xác minh trên cổng phụ huynh</button>
+<button type="button" id="portalQrConnect" disabled>Kết nối trực tiếp cổng phụ huynh (DEMO)</button><p id="portalQrExportStatus" role="status">Chưa tải dữ liệu QR.</p></section>
+    <div id="controls">
+      <input type="file" id="upload" accept=".xlsx,.xls" />
+      <label>Tên trường <input id="schoolName" type="text" placeholder="Nhập tên trường để lưu logo riêng" /></label>
+      <label>Logo trường (tùy chọn) <input id="schoolLogo" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+      <button id="removeSchoolLogo" type="button">Xóa logo trường này</button>
+      <small id="schoolLogoStatus" role="status"></small>
+      <input type="text" id="search" placeholder="🔍 Tìm theo AccountName / AccountNumber / Amount / Remark..." />
+      <div id="classExport" class="class-export">
+        <select id="classSelect" aria-label="Chọn lớp để xuất QR">
+          <option value="">Chọn lớp để xuất QR</option>
+        </select>
+        <button id="downloadClass" type="button" disabled>⬇ Xuất QR theo lớp</button>
+      </div>
+      <button id="downloadAll" style="display:none;">⬇ Tải tất cả QR (ZIP)</button>
+    </div>
+
+    <section id="noticeTool" class="notice-tool" hidden>
+      <div class="notice-grid">
+        <article class="notice-card notice-card-output">
+          <div class="notice-card-head">
+            <div><b>1. Xuất thông báo</b><small>Chọn mẫu và xuất nhanh sau khi thiết lập đối tượng bên dưới.</small></div>
+          </div>
+          <label class="template-option selected"><input type="radio" name="noticeTemplate" value="a4" checked><span><b>Mẫu A4 chuẩn</b><small>In/PDF, mỗi học sinh một trang.</small></span><em>A4</em></label>
+          <label class="template-option"><input type="radio" name="noticeTemplate" value="insurance2"><span><b>Mẫu 2 QR BHYT + BHTT</b><small>BHYT bắt buộc, BHTT tự nguyện; 2 QR riêng, không phải 2 phương án thay thế.</small></span><em>2 QR</em></label>
+          <label class="template-option"><input type="radio" name="noticeTemplate" value="mobile"><span><b>Mẫu ảnh điện thoại</b><small>Gọn, QR lớn, gửi Zalo/Messenger.</small></span><em>9:16</em></label>
+          <div class="notice-actions">
+            <button id="previewNotices" type="button">Xem trước</button>
+            <button id="printNotices" type="button">🖨 In / Lưu PDF A4</button>
+            <button id="downloadNoticeImages" type="button">⬇ Xuất ZIP ảnh thông báo (JPG/PNG)</button>
+          </div>
+          <div class="notice-note"><b>QR thanh toán:</b> sử dụng chính BankBin, AccountNumber và AccountName từ file Excel. Không cần cấu hình lại tài khoản nhận tiền.</div>
+        </article>
+
+        <article class="notice-card notice-card-filter">
+          <div class="notice-card-head">
+            <div><b>2. Chọn đối tượng & khoản thu</b><small>Dữ liệu lấy trực tiếp từ file Excel đã tải.</small></div>
+            <span>BIDV QR</span>
+          </div>
+          <div class="notice-fields">
+            <label>Lớp<select id="noticeClass"><option value="all">Tất cả lớp</option></select></label>
+            <label>Học sinh<select id="noticeStudent"><option value="all">Tất cả học sinh trong phạm vi</option></select></label>
+            <label>Hạn nộp<input id="noticeDeadline" type="date"></label>
+            <label>Kỳ thu<input id="noticePeriod" type="text" maxlength="80" placeholder="Ví dụ: Tháng 10/2026 hoặc Đợt 1 năm học 2026-2027"></label>
+            <label>Cơ quan chủ quản<input id="noticeParentUnit" type="text" value="UBND XÃ HIẾU GIANG" placeholder="UBND XÃ ..."></label>
+            <label>Người ký / Hiệu trưởng<input id="noticeSigner" type="text" placeholder="Họ và tên (tùy chọn)"></label>
+            <label>Cách tạo QR<select id="noticeQrMode"><option value="separate">QR riêng từng khoản (giữ nguyên Remark)</option></select></label>
+            <label class="notice-wide">Khoản cần thông báo
+              <select id="noticeFees" multiple size="7"><option value="all" selected>Tất cả khoản phù hợp</option></select>
+              <small>Danh sách này chỉ hiển thị các khoản thuộc lớp/học sinh đang chọn. Giữ Ctrl/Cmd để chọn nhiều khoản.</small>
+            </label>
+            <label class="notice-wide">Lời nhắn cuối thông báo
+              <textarea id="noticeMessage" rows="3">Nếu phụ huynh đã thanh toán, vui lòng bỏ qua thông báo này.</textarea>
+            </label>
+          </div>
+          <div class="notice-stats">
+            <div><span>Số học sinh</span><strong id="noticeStudentCount">0</strong></div>
+            <div><span>Số khoản</span><strong id="noticeFeeCount">0</strong></div>
+            <div><span>Tổng tiền</span><strong id="noticeGrandTotal">0 ₫</strong></div>
+          </div>
+        </article>
+      </div>
+      <article class="notice-card notice-preview-card">
+        <div class="notice-card-head"><div><b>Xem trước</b><small id="noticePreviewSummary">Chọn dữ liệu rồi bấm “Xem trước”.</small></div><span id="noticeQrStatus">Chưa tạo QR</span></div>
+        <div id="noticePreview" class="notice-preview"><div class="notice-empty">Chưa có thông báo được tạo.</div></div>
+      </article>
+    </section>
+
+    <section id="insuranceTool" hidden>
+<div class="bi-layout"><article class="bi-card">
+<h2>Thông báo lựa chọn thanh toán</h2><p>Mỗi dòng trong file là một khoản định danh / một lựa chọn QR. Cùng mã học sinh gốc và nhóm lựa chọn sẽ được gom vào một thông báo. Phụ huynh chỉ chọn một QR trong nhóm.</p>
+<h3>1. Nạp các lựa chọn QR</h3><label>Nạp Excel / CSV (mỗi dòng một lựa chọn)<input id="biFile" type="file" accept=".xlsx,.xls,.csv"></label><button id="biTemplate">Tải mẫu Excel mới</button><button id="biExisting">Dùng dữ liệu đã nạp ở tab Tạo QR</button>
+<p class="bi-note">Dùng <b>StudentID</b> làm mã học sinh gốc; <b>CustomerCode</b> là mã thu riêng nếu có; file chỉ có <b>AccountNumber</b> sẽ dùng chính tài khoản định danh, không cần thêm cột. <b>Amount</b>, <b>AccountNumber</b>, <b>BankBin</b>, <b>AccountName</b>, <b>Remark</b> lấy từ chính dòng đó. Web không tự tạo mã thu, tài khoản hoặc cộng tiền.</p>
+<div id="biMapping" hidden></div><p id="biDataStatus" role="status">Chưa có dữ liệu. Dữ liệu học sinh chỉ giữ trong phiên đang mở.</p>
+<details><summary>Kiểm tra các lựa chọn và tài khoản</summary><div id="biReview" class="bi-review"></div></details>
+<p class="bi-note">Họ tên in trên thông báo ưu tiên cột <b>Họ tên có dấu / Họ và tên / StudentName</b>. Nếu file chỉ có AccountName không dấu, bổ sung cột StudentName có dấu. <b>Ngày sinh</b> thay cho mã học sinh trên bản in; mã học sinh và định danh vẫn giữ trong dữ liệu để ghép QR và đối chiếu.</p><h3>2. Nội dung thông báo</h3><label>Cơ quan chủ quản (tùy chọn)<input id="biAuthority" maxlength="70" placeholder="UBND XÃ HIẾU GIANG"></label><label>Tiêu đề<input id="biTitle" maxlength="65" value="THÔNG BÁO KHOẢN THU HỌC SINH"></label><label>Năm học / Đợt thu<input id="biYear" placeholder="2026–2027 / Đợt bảo hiểm" maxlength="60"></label>
+<label>Giải thích chung về các khoản thu<textarea id="biIntro" maxlength="250" rows="3" placeholder="Ví dụ: BHYT bắt buộc theo danh sách nhà trường; BHTT tự nguyện. Chọn QR 1 nếu chỉ nộp BHYT; chọn QR 2 nếu tham gia cả hai."></textarea></label>
+<p class="bi-note">Tên lựa chọn lấy từ <b>FeeName</b> hoặc <b>Khoản Thu</b>; chi tiết khoản bao gồm lấy từ <b>Includes</b>; lời giải thích riêng lấy từ <b>ChoiceNote</b>. QR gộp cần ghi rõ đã bao gồm khoản nào. Phần mô tả không làm thay đổi số tiền QR.</p>
+<label>Hạn nộp<input id="biDeadline" type="date"></label><label>Liên hệ của trường<input id="biContact" maxlength="100"></label><label>Địa danh ban hành (tùy chọn)<input id="biPlace" maxlength="50" placeholder="Hiếu Giang"></label><label>Ngày thông báo (tùy chọn)<input id="biIssueDate" type="date"></label><label>Chức danh người ký (tùy chọn)<input id="biSignerRole" maxlength="50" placeholder="Hiệu trưởng"></label><label>Họ tên người ký (tùy chọn)<input id="biSigner" maxlength="70"></label><button id="biSave">Lưu cách trình bày cho trường này</button>
+<h3>3. Chọn lớp và xuất</h3><label>Lớp (Ctrl/Cmd để chọn nhiều)<select id="biClasses" multiple size="5"><option value="all" selected>Tất cả lớp</option></select></label>
+<div class="bi-actions"><button id="biPreview">Xem trước</button><button id="biPdf">Xuất PDF theo lớp</button><button id="biImages">Xuất ảnh theo lớp</button><button id="biExport">Xuất cả ảnh + PDF (ZIP)</button><button id="biCancel" hidden>Hủy xuất</button></div><p id="biProgress" role="status" aria-live="polite"></p>
+<p class="bi-note">Mỗi trang có tối đa 2 QR để giữ mã rõ khi in A5. Nhóm có nhiều lựa chọn sẽ có nhiều trang; chỉ chọn 1 QR trong toàn nhóm. Web không nhận trạng thái thanh toán, không đăng ký định danh và không khóa QR đã gửi.</p>
+</article><article class="bi-card"><h3>Mẫu A5 · Chọn một QR trong nhóm</h3><div class="bi-pager"><button id="biPrev" disabled>‹ Trước</button><span id="biPage">Chưa có thông báo</span><button id="biNext" disabled>Sau ›</button></div><div id="biCanvas"><p>Chọn dữ liệu và bấm Xem trước.</p></div></article></div></section>
+<div id="qrPaging" style="margin:12px 0;display:none;align-items:center;gap:12px;flex-wrap:wrap"><button type="button" id="qrPrev">◀ Trang trước</button><span id="qrPageInfo"></span><button type="button" id="qrNext">Trang sau ▶</button></div><div id="qrExportStatus" role="status" aria-live="polite" style="padding:8px 0"></div><div id="qrs"></div>
+
+    
+    <div id="noticePrintRoot" aria-hidden="true"></div>
+  </main>
+
+  <script>
+    const BIDV_MARK_DATA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAASFBMVEX+/v7/xiz/yDL++Oj+9Nf+0lf+12f+zUT+7Lj/23f+6Kj/5Jj/8cn/wh3+4Ir+3oL/7sH/0E3t7e3/vxLw7+sAAAAAAAAAAADrdEw/AAAGLUlEQVR42rVai7arKAyV8Ba02pn//9YhwQcoCD3tsNa9PbWakPdOcBg6lhhfUgNjoNXL8OHHi48q0D4X2OWn9B1Sh7DY+Sl/x8JooppJgF/tjxRlkR67rXBN+19oXxbJEwvGxq/pC80q5CMH9+3+n+iTmr6UQT7SJxm+ssPcoI8c1kNaIcSHfuXb9IFNQUncxCgPYS7t2M9FtRiEn6UZxEvnV1WnYZaWAYDBOAi7RTckn9r9QIDwo+LDa+N0DfO1nUk4PLsobt/rGOb6LhybWwzGBn0tgpeRmbW/azNcV80cBE/0FUUJagf1XQhIYPKZwfqYJCxlEbSDEEoWd9OQ4ckESN/D5kZuYkyY0s0wvZ7SHHvcvyE1SxHD3Q3F7QAzjSgA2D37IrohN6UNGtK2KjPQ9bDG5+D07JNLuMx9Ug1QVOBln4MHZzWkYilDkoEkgKLc5DS7+Phl4bVg4U8SKL7lSeOU3kUJlrMpfdKOG3RFBPdkg3EwZvFbEt6gy6SicCZL6qqSWGrBIAwXxEBPtG/MwsFhuFPSxTLn8pCXISmVvRpEQTsSJjMAeqObTvtq6w+VyMyhg7cMrsygoCMjo/WD0lekllpYOuFJFyIPSQZ1BrYEg3bPDnT8rOSq4fQiBteH1kcG8gZTgNyLnnBnwR3Vlobh5nvhl6qKkHeqnj24gHlxzVbCbrF9xSpBaFkHCJCVgP2umF6uWxUvctSCVmVdApbG1pkcWEzB4w3HWzkX0Kuq1ydIUEp2DzftmpFI4BmUQezJIAv2PQX7LvwXjDzIqQTDkz3mobgHp+0EsEGXlEpKub0M40IQ8GtIVUoTud7MMZXIK4vT1dWNQUxgtgdhUnwoBI0h0C8s/JlQrksIvNe3VbRrH6Tjg5eJs2CWKlkgFaHtSAGcwg63mBUUrnBNRUVgY/hz1UvzuztMHJpDy46MsBwxUKx3mK6foEEehJuJAxTbcs7ZPrgyKJDU40B3F7OZeJKcU3NU96EdOTlBkoihm8UmhcFMk8CWtZbNxZjd17FG2MD1a6L2Jy6oY1x7rzANW5CeQs6d4XysygAIpAITH3AIFo0cErlZi8Fn3eqCz2TQF+owdyaU+6cJRFJNargMYhWCjzRklPTRv0WjpQ9xKD6mzwnpeOov1HO/tEPOj+hTIkILK1TS8tTxbTWnO1UkoRx2FjsgmReNcr52Hyg/kpdiS0aJ96lCun6RaXodyM/6yHUUazlwvOkIc6npq5mDH2fqH/Zs7faCkIJAfSuZM2WodjUQ8ujuGdi8pCUGvCTsXQDdkRh2iK9xzJIXZWCvSqyh9iTrGpm5aFgnduwPZXC9XBgI0SdA7EcNwUq4o5Yk088T3HBXj4t6slQM4AK0E8UB0Y6u7y50n8sJMqWaoAROk2C+ZCTuC9MMMa8A7o7sgi/rWk00lyEX7MPEkOb+yWktKsNqOQOoMcjd5LUFI0YgN+kAcQMlqIb1ygAzgu5jcIzatbLOeC9weeOsPBzk1kIJUvTapSLc6XyQmpLWMl7SUrKb83qiUp1f3YutmDU7JjlwTnTW2e99lrsOHUy9JhYRj7ErRAlIkulo84OTumsJGikrQ4XBWq18IUVahcvOI50KidAAMslpr/Iy4Ra+t9E/GeAS+/Kjjd1+CI3lgsTUY6NfTWa6NEsGygozQu45vVNWpzn1gVTiFdnkDvck00rqSQ81E6iPzyYIOeuEQzDBNJqpMwo6RuPIIcLJ11FHhP1o3tWYLOO8MXLAmR5GwSpqGlr+NBsPuMpx0hJQnzHN4wSf+WjjfAWRG5fBlyZFCHH5fCzbOj6A0IbZ0MEsoeKThoouKr44AMHtjaGD0djIlTTU7h3H1gkLEhgpllTpfEK3EFvjiCUGhKTQLpDfp8Z/PgLZTolo7GZYUu/jn7rnpEt0HKNRbXDTmVDoh7UTkNuek0CMVe+UPiSQc3fD2LJC5orcGzMa89lxpmlbwQxfrXl6joXvj8TtBPB/0h/O0VLpqNQMP1iu+FLC1ur9ZPn1Bvq3Vu93L4ZcgBh+m3/7essos+5Hjj9/ewZfzlFSay3V/P27Oe/38ObhP/yT/vF3vM75v1vY7r9tD2wf4aH3+W1473f8B6czMXFgHriqAAAAAElFTkSuQmCC';
+    let brandingImagesPromise = null;
+    const schoolNameInput = document.getElementById('schoolName');
+    const schoolLogoInput = document.getElementById('schoolLogo');
+    const schoolLogoStatus = document.getElementById('schoolLogoStatus');
+    const logoStoragePrefix = 'bidvqrgen:school-logo:';
+    const schoolLogos = new Map();
+    schoolNameInput.value = localStorage.getItem('bidvqrgen:school-name') || '';
+    let logoIsTemporary = false;
+
+    function schoolKey() {
+      return schoolNameInput.value.trim().normalize('NFC').toLocaleLowerCase('vi-VN');
+    }
+    function currentSchoolLogo() {
+      const key = schoolKey();
+      if (!key) return null;
+      if (schoolLogos.has(key)) return schoolLogos.get(key);
+      try { return localStorage.getItem(logoStoragePrefix + key); }
+      catch (error) { return null; }
+    }
+    function updateLogoStatus() {
+      schoolLogoStatus.textContent = logoIsTemporary ? 'Logo chỉ dùng trong phiên này vì bộ nhớ trình duyệt đã đầy.' : !schoolKey()
+        ? 'Nhập tên trường để gắn logo riêng.'
+        : currentSchoolLogo() ? 'Đã có logo cho trường này.' : 'Chưa có logo: ảnh QR sẽ dùng hoa mai BIDV ở giữa.';
+    }
+    function refreshBranding() {
+      for (const item of allData) {
+        item.imageData = null;
+        item.imagePromise = null;
+        item.schoolLogoData = currentSchoolLogo();
+      }
+      renderQR(allData);
+      updateLogoStatus();
+    }
+    schoolNameInput.addEventListener('change', () => {
+      localStorage.setItem('bidvqrgen:school-name', schoolNameInput.value.trim());
+      logoIsTemporary = false;
+      schoolLogoInput.value = '';
+      refreshBranding();
+    });
+    schoolNameInput.addEventListener('input', updateLogoStatus);
+    schoolLogoInput.addEventListener('change', async () => {
+      const file = schoolLogoInput.files[0];
+      if (!file) return;
+      if (!schoolKey()) { alert('Vui lòng nhập tên trường trước khi tải logo.'); schoolLogoInput.value = ''; return; }
+      if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) {
+        alert('Chọn ảnh PNG, JPG hoặc WebP nhỏ hơn 2 MB.'); schoolLogoInput.value = ''; return;
+      }
+      const data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      let logoImage;
+      try { logoImage = await loadImage(data); } catch (error) { alert('Không đọc được logo trường.'); return; }
+      if (Math.min(logoImage.naturalWidth, logoImage.naturalHeight) < 300) {
+        alert('Logo gốc khá nhỏ (' + logoImage.naturalWidth + ' × ' + logoImage.naturalHeight + ' px). Nên chọn ảnh PNG hoặc WebP từ 500 × 500 px để chi tiết rõ hơn khi in.');
+      }
+      const key = schoolKey();
+      schoolLogos.set(key, data);
+      logoIsTemporary = false;
+      try { localStorage.setItem(logoStoragePrefix + key, data); }
+      catch (error) { logoIsTemporary = true; }
+      refreshBranding();
+    });
+    document.getElementById('removeSchoolLogo').addEventListener('click', () => {
+      if (!schoolKey()) return;
+      schoolLogos.delete(schoolKey());
+      logoIsTemporary = false;
+      localStorage.removeItem(logoStoragePrefix + schoolKey());
+      schoolLogoInput.value = '';
+      refreshBranding();
+    });
+    updateLogoStatus();
+
+    let qrList = [];
+    let allData = [];
+
+    document.getElementById('upload').addEventListener('change', handleFile, false);
+    document.getElementById('downloadAll').addEventListener('click', downloadAll, false);
+    document.getElementById('search').addEventListener('input', filterQR, false);
+    document.getElementById('classSelect').addEventListener('change', updateClassExportButton, false);
+    document.getElementById('downloadClass').addEventListener('click', downloadSelectedClass, false);
+    document.getElementById('qrModeTab').addEventListener('click', () => setMode('qr'));
+    document.getElementById('noticeModeTab').addEventListener('click', () => setMode('notice'));
+    document.getElementById('noticeClass').addEventListener('change', refreshNoticeSelectors);
+    document.getElementById('noticeStudent').addEventListener('change', refreshNoticeSelectors);
+    document.getElementById('noticeQrMode').addEventListener('change', updateNoticeStats);
+    document.getElementById('noticeDeadline').addEventListener('change', updateNoticeStats);
+    document.getElementById('noticePeriod').addEventListener('change',()=>localStorage.setItem('bidvqrgen:notice-period',document.getElementById('noticePeriod').value.trim()));
+    document.getElementById('noticeFees').addEventListener('change', event => {
+      const values=[...event.currentTarget.selectedOptions].map(o=>o.value);
+      if(values.length>1 && values.includes('all')) event.currentTarget.querySelector('option[value="all"]').selected=false;
+      updateNoticeStats();
+    });
+    document.querySelectorAll('input[name="noticeTemplate"]').forEach(radio=>radio.addEventListener('change',()=>{
+      document.querySelectorAll('.template-option').forEach(label=>label.classList.toggle('selected',label.querySelector('input').checked));
+      if(window.noticeEntries) renderNoticePreview(window.noticeEntries);
+    }));
+    document.getElementById('previewNotices').addEventListener('click',()=>previewNotices().catch(error=>alert(error.message||error)));
+    document.getElementById('printNotices').addEventListener('click',()=>printNotices().catch(error=>alert(error.message||error)));
+    document.getElementById('downloadNoticeImages').addEventListener('click',()=>downloadNoticeImages().catch(error=>alert(error.message||error)));
+
+    function normalizeHeader(value) {
+      return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    }
+    function findHeaderIndex(rows) {
+      const keys=['accountnumber','bankbin','accountname','remark','class','studentid','so tai khoan','ma bin','ho ten','lop','ma hoc sinh'];
+      let best=0,bestScore=-1;
+      rows.slice(0,20).forEach((row,index)=>{
+        const cells=(row||[]).map(normalizeHeader);
+        const score=cells.reduce((n,h)=>n+(keys.some(k=>h===k||h.includes(k))?1:0),0);
+        if(score>bestScore){bestScore=score;best=index;}
+      });
+      return bestScore>=2?best:0;
+    }
+    function mapColumns(headers) {
+      const hs=headers.map(normalizeHeader);
+      const pick=(patterns,fallback=-1)=>{
+        for(const p of patterns){const i=hs.indexOf(p);if(i>=0)return i;}
+        for(const p of patterns){const i=hs.findIndex(h=>h&&(h.includes(p)||p.includes(h)));if(i>=0)return i;}
+        return fallback;
+      };
+      return {
+        AccountNumber:pick(['accountnumber','account number','so tai khoan dinh danh','so tai khoan','stk'],0),
+        Bank:pick(['bank','ngan hang'],1),
+        BankBin:pick(['bankbin','bank bin','ma bin','bin'],2),
+        Amount:pick(['amount','so tien','so tien nop','so tien phai nop'],3),
+        StudentName:pick(['studentname','ho va ten hoc sinh','ho ten hoc sinh','ten hoc sinh','ho va ten','ho ten','student name','fullname','full name'],-1),
+        AccountName:pick(['accountname','account name','ten tai khoan','ten khach hang','account holder'],4),
+        Remark:pick(['remark','noi dung','noi dung chuyen khoan','noi dung thanh toan'],5),
+        Class:pick(['class','lop','khoi lop'],6),
+        StudentID:pick(['studentid','student id','ma hoc sinh','ma hs','ma moet'],7),
+        FeeName:pick(['feename','fee name','khoan thu','khoan nop','noi dung khoan thu','dich vu cap 2'],8),
+        FeeCode:pick(['feecode','fee code','ma khoan thu','ma khoan nop','ky hieu khoan thu','ma dich vu cap 2']),
+        BirthDate:pick(['birthdate','birth date','ngay sinh','ngay thang nam sinh'],9),
+        ParentName:pick(['parentname','parent name','phu huynh','ten phu huynh'],10),
+        CustomerCode:pick(['customercode','customer code','ma thu','ma kh','ma khach hang']),
+        ChoiceGroup:pick(['choicegroup','choice group','nhom lua chon']),
+        Includes:pick(['includes','cac khoan bao gom','bao gom']),
+        ChoiceNote:pick(['choicenote','choice note','ghi chu lua chon']),
+        ChoiceOrder:pick(['choiceorder','choice order','thu tu'])
+      };
+    }
+    function rowValue(row,index){return index>=0&&index<row.length?row[index]:'';}
+    function handleFile(e) {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+        const headerIndex=findHeaderIndex(rows);
+        const headers=rows[headerIndex]||[];
+        const map=mapColumns(headers);
+        allData = [];
+        qrList = [];
+        document.getElementById('qrs').innerHTML = "";
+
+        for (let i = headerIndex + 1; i < rows.length; i++) {
+          const row=rows[i]||[];
+          const AccountNumber=rowValue(row,map.AccountNumber), Bank=rowValue(row,map.Bank), BankBin=rowValue(row,map.BankBin), Amount=rowValue(row,map.Amount);
+          const StudentName=rowValue(row,map.StudentName), AccountName=rowValue(row,map.AccountName), Remark=rowValue(row,map.Remark), Class=rowValue(row,map.Class), StudentID=rowValue(row,map.StudentID);
+          const FeeName=rowValue(row,map.FeeName), FeeCode=rowValue(row,map.FeeCode), BirthDate=rowValue(row,map.BirthDate), ParentName=rowValue(row,map.ParentName);
+          if (!AccountNumber || !BankBin) continue;
+
+          const displayName = formatStudentQrName(AccountName, Class);
+          const qrUrl = ''; // QR generated by BIDV internal EMV engine.
+
+          const item = {
+            url: qrUrl,
+            filename: "",
+            AccountNumber, Bank, BankBin, Amount, AccountName, StudentName: String(StudentName||'').trim(), DisplayName: displayName, Remark, Class, StudentID,
+            FeeName: String(FeeName||'').trim() || String(FeeCode||'').trim() || String(Remark||'').trim() || 'Khoản thu', FeeCode:String(FeeCode||'').trim(),
+            BirthDate: String(BirthDate||'').trim(), ParentName: String(ParentName||'').trim(),
+            CustomerCode:rowValue(row,map.CustomerCode), ChoiceGroup:rowValue(row,map.ChoiceGroup), Includes:rowValue(row,map.Includes), ChoiceNote:rowValue(row,map.ChoiceNote), ChoiceOrder:rowValue(row,map.ChoiceOrder),
+            schoolLogoData: currentSchoolLogo()
+          };
+          allData.push(item);
+        }
+
+        assignExportFilenames(allData);
+        updateClassExportOptions(allData);
+        renderQR(allData);
+        refreshNoticeSelectors();
+        document.dispatchEvent(new CustomEvent("bidvqrgen:data-loaded", {detail:{rows:allData}}));
+
+        if (allData.length > 0) {
+          document.getElementById('downloadAll').style.display = "inline-block";
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Ghép tên học sinh với lớp để ảnh QR luôn hiện đủ mã lớp (ví dụ: TRAN GIA BAO 6A).
+    function formatStudentQrName(accountName, className) {
+      let name = String(accountName || '').trim().replace(/\s+/g, ' ');
+      const classLabel = String(className || '').trim().replace(/\s+/g, ' ');
+      if (!classLabel) return name;
+
+      const normalize = value => value.normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/gi, 'd')
+        .replace(/[^a-z0-9]/gi, '')
+        .toUpperCase();
+      const normalizedName = normalize(name);
+      const normalizedClass = normalize(classLabel);
+
+      // Không thêm lớp lần nữa nếu trường AccountName đã có đủ mã lớp.
+      if (normalizedName.endsWith(normalizedClass)) return name;
+
+      // Một số file đã có chữ lớp cuối (A/B) nhưng thiếu chữ số đầu của lớp.
+      const classSuffix = classLabel.replace(/^\d+/, '');
+      if (classSuffix && normalize(classSuffix)) {
+        const words = name.split(/\s+/);
+        if (words.length > 1 && normalize(words[words.length - 1]) === normalize(classSuffix)) {
+          words.pop();
+          name = words.join(' ');
+        }
+      }
+      return [name, classLabel].filter(Boolean).join(' ');
+    }
+
+    // Thay toàn bộ phần thông tin VietQR bên dưới logo bằng nhãn trường cần in.
+    // QR và payload thanh toán giữ nguyên; chỉ phần trình bày ở chân ảnh được vẽ lại.
+    function formatAmountVnd(value) {
+      if (value === null || value === undefined || value === '') return '';
+      const digits = String(value).replace(/[^0-9-]/g, '');
+      const amount = Number(digits);
+      if (!Number.isFinite(amount)) return String(value).trim();
+      return Math.round(amount).toLocaleString('vi-VN') + ' VND';
+    }
+
+    function loadBrandingImages() {
+      if (!brandingImagesPromise) {
+        brandingImagesPromise = Promise.all([
+          loadImage(BIDV_MARK_DATA)
+        ]).catch(error => {
+          brandingImagesPromise = null;
+          throw error;
+        });
+      }
+      return brandingImagesPromise;
+    }
+
+
+    // Render from the same EMV payload exported to Cloudflare, without any external QR image service.
+    // Keep quiet zone and bank mark small enough for high-error-correction QR modules.
+    async function portalBrandedQR(payload, item) {
+      if(typeof QRCode==='undefined')throw Error('Thiếu thư viện QR nội bộ.');
+      const tmp=document.createElement('div');
+      tmp.style.cssText='position:fixed;left:-10000px;top:0';
+      document.body.appendChild(tmp);
+      try {
+        const instance=new QRCode(tmp,{text:payload,width:380,height:380,correctLevel:QRCode.CorrectLevel.H});
+        const matrix=instance._oQRCode;
+        if(!matrix)throw Error('Không có ma trận QR');
+        const n=matrix.getModuleCount(),scale=Math.floor(408/(n+8));
+        if(scale<3)throw Error('Payload QR quá dài cho mẫu QR có logo');
+        const canvas=document.createElement('canvas');canvas.width=480;canvas.height=600;
+        const c=canvas.getContext('2d');
+        c.fillStyle='#fff';c.fillRect(0,0,480,600);
+        c.fillStyle='#007e75';c.fillRect(0,0,480,6);
+        const [brand]=await loadBrandingImages();
+        const school=item.schoolLogoData?await loadImage(item.schoolLogoData):null;
+        function place(img,cx,cy,max){if(!img)return;const width=img.naturalWidth||img.width,height=img.naturalHeight||img.height;const ratio=Math.min(max/width,max/height);c.drawImage(img,cx-width*ratio/2,cy-height*ratio/2,width*ratio,height*ratio)}
+        if(school){place(school,173,46,57);place(brand,298,46,53)}
+        else place(brand,240,46,59);
+        c.fillStyle='#193d43';c.textAlign='center';c.font='bold 14px Arial';
+        c.fillText('BIDV  |  QR THANH TOAN',240,86);
+        const size=(n+8)*scale,startX=Math.round((480-size)/2),startY=102;
+        c.fillStyle='#fff';c.fillRect(startX-2,startY-2,size+4,size+4);
+        c.fillStyle='#15242a';
+        for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(matrix.isDark(y,x))c.fillRect(startX+(x+4)*scale,startY+(y+4)*scale,scale,scale);
+        const middleX=startX+size/2,middleY=startY+size/2,logoSize=Math.min(43,Math.floor(n*scale*0.12));
+        c.fillStyle='#fff';c.beginPath();c.roundRect(middleX-logoSize/2-3,middleY-logoSize/2-3,logoSize+6,logoSize+6,6);c.fill();
+        place(brand,middleX,middleY,logoSize);
+        c.fillStyle='#153c41';
+        const display=String(item.DisplayName||item.AccountName||'').replace(/\s+/g,' ').trim();
+        function fit(text,maxWidth,fontSize){while(fontSize>11){c.font='600 '+fontSize+'px Arial';if(c.measureText(text).width<=maxWidth)break;fontSize--}return fontSize}
+        const baseY=startY+size+23;
+        c.font='600 '+fit(display,442,19)+'px Arial';c.fillText(display,240,baseY);
+        c.fillStyle='#006b64';c.font='bold 16px Arial';
+        c.fillText('So tien: '+Number(String(item.Amount||0).replace(/\D/g,'')).toLocaleString('vi-VN')+' VND',240,baseY+28);
+        c.fillStyle='#66777b';c.font='12px Arial';c.fillText('Kiem tra thong tin nguoi thu huong tren ung dung ngan hang',240,baseY+51);
+        const output=canvas.toDataURL('image/png');
+        if(!output.startsWith('data:image/png;base64,')||output.length>175000)throw Error('Anh QR co logo vuot gioi han an toan');
+        return output.slice(22);
+      } finally {tmp.remove()}
+    }
+    window.bidvQrPortalRenderBranded=portalBrandedQR;
+
+    function composeQrImage(sourceImage, displayName, amount, schoolLogo, bidvMark) {
+      const width = sourceImage.naturalWidth || sourceImage.width;
+      const height = sourceImage.naturalHeight || sourceImage.height;
+      const canvas = document.createElement('canvas');
+      // Xuất ở 2 lần kích thước gốc; logo và chữ được vẽ trực tiếp ở độ phân giải cao.
+      // Giữ các ô QR sắc cạnh khi phóng, chỉ bật nội suy mượt cho logo.
+      // Giới hạn ảnh ghép <= 1200px mỗi chiều, kể cả nguồn lớn bất thường.
+      // Không sử dụng Math.max(1, ...) vì có thể làm canvas quá kích thước.
+      const outputScale=2;
+      if(!width||!height||!Number.isFinite(width)||!Number.isFinite(height))throw new Error('Ảnh QR đầu vào không hợp lệ.');
+      const safeScale=Math.min(outputScale,1200/Math.max(width,height));
+      canvas.width=Math.max(1,Math.round(width*safeScale));
+      canvas.height=Math.max(1,Math.round(height*safeScale));
+      const ctx = canvas.getContext('2d');
+      ctx.scale(safeScale, safeScale);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(sourceImage, 0, 0, width, height);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // Che nhận diện VietQR phía trên, thay bằng logo trường và BIDV theo bố cục cân đối.
+      const topHeight = Math.round(height * 0.13);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, topHeight);
+
+      const centerY = height * 0.065;
+      const drawContained = (image, x, size) => {
+        const ratio = Math.min(size / image.naturalWidth, size / image.naturalHeight);
+        const w = image.naturalWidth * ratio, h = image.naturalHeight * ratio;
+        ctx.drawImage(image, x - w / 2, centerY - h / 2, w, h);
+      };
+      if (schoolLogo) {
+        drawContained(schoolLogo, width * 0.34, Math.min(width * 0.15, height * 0.104));
+        ctx.fillStyle = '#d9e1e7';
+        ctx.fillRect(Math.round(width * 0.5), height * 0.027, Math.max(1, Math.round(width * 0.003)), height * 0.076);
+        drawContained(bidvMark, width * 0.66, Math.min(width * 0.15, height * 0.104));
+      } else {
+        drawContained(bidvMark, width / 2, Math.min(width * 0.15, height * 0.104));
+      }
+
+      // Che tên/nội dung/số tiền gốc dưới QR để chỉ còn thông tin học sinh đã nhập.
+      const left = Math.round(width * 0.025);
+      const top = Math.round(height * 0.835);
+      const panelWidth = Math.round(width * 0.95);
+      const panelHeight = Math.round(height * 0.16);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(left, top, panelWidth, panelHeight);
+
+      const safeName = String(displayName || '').trim();
+      const amountText = formatAmountVnd(amount);
+      const fitFont = (text, startSize, maxWidth, weight) => {
+        let size = startSize;
+        ctx.font = weight + ' ' + size + 'px Arial, sans-serif';
+        while (ctx.measureText(text).width > maxWidth && size > 12) {
+          size--;
+          ctx.font = weight + ' ' + size + 'px Arial, sans-serif';
+        }
+        return size;
+      };
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#333333';
+      const nameWeight = '600';
+      const nameSize = fitFont(safeName, Math.max(17, Math.round(width * 0.037)), width * 0.89, nameWeight);
+      ctx.font = nameWeight + ' ' + nameSize + 'px Arial, sans-serif';
+      ctx.fillText(safeName, width / 2, Math.round(height * 0.89), width * 0.89);
+
+      if (amountText) {
+        const amountLabel = 'Số tiền nộp: ' + amountText;
+        const amountWeight = '400';
+        const amountSize = fitFont(amountLabel, Math.max(16, Math.round(width * 0.032)), width * 0.89, amountWeight);
+        ctx.font = amountWeight + ' ' + amountSize + 'px Arial, sans-serif';
+        ctx.fillText(amountLabel, width / 2, Math.round(height * 0.96), width * 0.89);
+      }
+
+      const result=canvas.toDataURL('image/png');
+      if(!isValidQrDataUrl(result))throw new Error('Canvas không thể xuất PNG: nguồn '+width+'x'+height+', canvas '+canvas.width+'x'+canvas.height+', kết quả '+String(result).slice(0,32)+'.');
+      return result;
+    }
+
+    // Internal EMV generator and branded renderer. No remote QR service.
+    function prepareQrImage(item) {
+      if (isValidQrDataUrl(item.imageData)) return Promise.resolve(item.imageData);
+      if (item.imagePromise) return item.imagePromise;
+      item.imagePromise = (async () => {
+        if (!window.BIDVQREngine || !window.BIDVQRBrand) throw Error('Thiếu BIDV QR Engine / Renderer nội bộ.');
+        const original=String(item.Amount ?? '').trim().replace(/[\\s₫đ]/g,'');
+        const numeric=/^\\d+$/.test(original) ? original :
+          /^\\d{1,3}([.,]\\d{3})+$/.test(original) ? original.replace(/[.,]/g,'') : null;
+        const amount=Number(numeric);
+        if (!numeric || !Number.isSafeInteger(amount) || amount<=0) throw Error('Số tiền không hợp lệ: '+item.Amount);
+        const data={bankBin:item.BankBin,accountNumber:item.AccountNumber,
+          accountName:item.AccountName,amount,remark:item.Remark};
+        const payload=window.BIDVQREngine.generate(data);
+        if (!window.BIDVQREngine.verify(data,payload)) throw Error('EMV không khớp CRC hoặc dữ liệu gốc');
+        const png=await window.BIDVQRBrand.render(payload,{
+          label:item.DisplayName||item.AccountName,amount,schoolLogoData:item.schoolLogoData
+        });
+        if (!isValidQrDataUrl(png)) throw Error('Không thể tạo PNG QR hợp lệ');
+        item.qrPayload=payload;item.imageData=png;
+        return png;
+      })().catch(err=>{item.imagePromise=null;throw err;});
+      return item.imagePromise;
+    }
+    
+    // Keep large student files responsive: render only one small page of QR cards.
+    const qrPageSize = 24;
+    let qrCurrentPage = 0, qrVisibleRows = [];
+    document.getElementById('qrPrev').addEventListener('click', () => {qrCurrentPage--;renderQR(qrVisibleRows,true);});
+    document.getElementById('qrNext').addEventListener('click', () => {qrCurrentPage++;renderQR(qrVisibleRows,true);});
+    function renderQR(list, keepPage=false) {
+      if(!keepPage)qrCurrentPage=0;
+      qrVisibleRows=list;
+      const totalPages=Math.max(1,Math.ceil(list.length/qrPageSize));
+      qrCurrentPage=Math.max(0,Math.min(totalPages-1,qrCurrentPage));
+      document.getElementById('qrPaging').style.display=list.length>qrPageSize?'flex':'none';
+      document.getElementById('qrPageInfo').textContent=(list.length?('Hiển thị '+(qrCurrentPage*qrPageSize+1)+'–'+Math.min(list.length,(qrCurrentPage+1)*qrPageSize)+' / '+list.length+' khoản thu; trang '+(qrCurrentPage+1)+'/'+totalPages):'Không có dữ liệu');
+      document.getElementById('qrPrev').disabled=qrCurrentPage===0;
+      document.getElementById('qrNext').disabled=qrCurrentPage>=totalPages-1;
+      const container = document.getElementById('qrs');
+      container.innerHTML = "";
+      qrList = [];
+
+      list.slice(qrCurrentPage*qrPageSize,(qrCurrentPage+1)*qrPageSize).forEach(item => {
+        qrList.push(item);
+
+        const div = document.createElement('div');
+        div.className = "qr-item";
+        div.innerHTML = `
+          <p><b>${item.DisplayName || item.AccountName || ''}</b><br>
+          ${item.AccountNumber} (${item.Bank || ''})<br>
+          Số tiền: ${item.Amount || ''}<br>
+          ${item.Remark || ''}<br>
+          ${item.Class || ''} - ${item.StudentID || ''}</p>
+          <img alt="QR" />
+          <a download="${item.filename}">⬇ Lưu ảnh (${item.filename})</a>
+        `;
+        const image = div.querySelector('img');
+        image.loading = 'lazy';
+        image.alt = 'QR ' + (item.DisplayName || item.AccountName || '');
+        const link = div.querySelector('a');
+        if (!item.imageData) {
+          const composePreview = async () => {
+            if (item.imageData || item.composingPreview) return;
+            item.composingPreview = true;
+            try {
+              item.imageData = await prepareQrImage(item, image, false);
+              image.src = item.imageData;
+              link.href = item.imageData;
+            } catch (err) {
+              const reason = err && err.message ? err.message : String(err);
+              console.error('Không thể ghép logo/tạo ảnh QR:', err);
+              link.removeAttribute('href');
+              link.removeAttribute('download');
+              link.textContent = '⚠ Lỗi tạo ảnh QR';
+              link.title = reason;
+            } finally {
+              item.composingPreview = false;
+            }
+          };
+          // Lazy gallery: compose only when the QR enters the viewport.
+          // Do not fire an unpaced direct browser request per visible row.
+          // QR images for the current page are rendered locally.
+          image.alt = 'Đang tạo QR ' + (item.DisplayName || item.AccountName || '');
+          // Only QR on the current page enters the request queue.
+          composePreview();
+        } else {
+          image.src = item.imageData;
+        }
+        if(isValidQrDataUrl(item.imageData))link.href=item.imageData;
+        else link.removeAttribute('href');
+        link.addEventListener('click', async event => {
+          if (isValidQrDataUrl(item.imageData)) return;
+          event.preventDefault();
+          try {
+            item.imageData = await prepareQrImage(item, image.complete && image.naturalWidth && image.src===item.url ? image : null, false);
+            link.href = item.imageData;
+            link.click();
+          } catch (err) {
+            console.error('Không thể tạo ảnh QR có tên lớp:', err);
+            const reason = err && err.message ? err.message : String(err);
+            link.removeAttribute('href');
+            link.removeAttribute('download');
+            link.textContent = '⚠ Lỗi tạo ảnh QR';
+            link.title = reason;
+            alert('Không thể tạo ảnh QR: ' + reason);
+          }
+        });
+        container.appendChild(div);
+      });
+    }
+
+    function filterQR() {
+      const keyword = document.getElementById('search').value.toLowerCase();
+      if (!keyword) {
+        renderQR(allData);
+        return;
+      }
+      const filtered = allData.filter(item =>
+        ((item.DisplayName && item.DisplayName.toLowerCase().includes(keyword)) || (item.AccountName && item.AccountName.toLowerCase().includes(keyword))) ||
+        (item.AccountNumber && item.AccountNumber.toString().includes(keyword)) ||
+        (item.Amount && item.Amount.toString().includes(keyword)) ||
+        (item.Remark && item.Remark.toLowerCase().includes(keyword))
+      );
+      renderQR(filtered);
+    }
+
+
+    function moneyNotice(value) {
+      const n = Number(String(value ?? '').replace(/[^0-9.-]/g,'')) || 0;
+      return Math.round(n).toLocaleString('vi-VN') + ' ₫';
+    }
+    function amountToVietnameseWords(value) {
+      let n=Math.round(Number(String(value ?? '').replace(/[^0-9.-]/g,''))||0);
+      if(n===0) return 'Không đồng';
+      if(n<0) return 'Âm '+amountToVietnameseWords(Math.abs(n)).toLocaleLowerCase('vi-VN');
+
+      const digit=['không','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
+      const scale=['','nghìn','triệu','tỷ','nghìn tỷ','triệu tỷ','tỷ tỷ'];
+
+      function readThree(num,full){
+        const hundred=Math.floor(num/100);
+        const ten=Math.floor((num%100)/10);
+        const unit=num%10;
+        const out=[];
+
+        if(hundred>0){
+          out.push(digit[hundred],'trăm');
+        }else if(full && (ten>0||unit>0)){
+          out.push('không','trăm');
+        }
+
+        if(ten>1){
+          out.push(digit[ten],'mươi');
+          if(unit===1) out.push('mốt');
+          else if(unit===4) out.push('tư');
+          else if(unit===5) out.push('lăm');
+          else if(unit>0) out.push(digit[unit]);
+        }else if(ten===1){
+          out.push('mười');
+          if(unit===5) out.push('lăm');
+          else if(unit>0) out.push(digit[unit]);
+        }else if(unit>0){
+          if(hundred>0||full) out.push('lẻ');
+          out.push(digit[unit]);
+        }
+        return out.join(' ');
+      }
+
+      const groups=[];
+      while(n>0){groups.push(n%1000);n=Math.floor(n/1000);}
+      let highest=groups.length-1;
+      const parts=[];
+      for(let i=highest;i>=0;i--){
+        const group=groups[i];
+        if(group===0) continue;
+        const full=i<highest && group<100;
+        const text=readThree(group,full);
+        if(text) parts.push(text+(scale[i]?' '+scale[i]:''));
+      }
+      let result=parts.join(' ').replace(/s+/g,' ').trim();
+      result=result.charAt(0).toLocaleUpperCase('vi-VN')+result.slice(1);
+      return result+' đồng';
+    }
+    function normalizeText(value) {
+      return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    }
+    function noticeStudentKey(item) {
+      return String(item.StudentID || '').trim() || [item.AccountName,item.Class].map(normalizeText).join('|');
+    }
+    function insuranceFeeCode(item) {
+      const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toUpperCase().trim();
+      const code=norm(item.FeeCode);
+      if(code==='YT'||code==='TT')return code;
+      const name=norm(item.FeeName);
+      if(/BAO HIEM Y TE|\bBHYT\b/.test(name))return 'YT';
+      if(/BAO HIEM THAN THE|\bBHTT\b/.test(name))return 'TT';
+      if(name==='YT'||name==='TT')return name;
+      const remark=norm(item.Remark),m=remark.match(/(?:^|[^A-Z0-9])(YT|TT)(?=$|[^A-Z0-9])/);
+      if(m)return m[1];
+      // Mã định danh ngân hàng có thể kết thúc bằng YT/TT. Chỉ dùng
+      // khi chưa nhận diện được từ mã khoản, tên khoản hoặc Remark.
+      const account=String(item.AccountNumber||'').trim().toUpperCase();
+      const suffix=account.match(/(YT|TT)$/);
+      return suffix?suffix[1]:'';
+    }
+    function insuranceFeeName(item){
+      const code=insuranceFeeCode(item);
+      return code==='YT'?'Bảo hiểm y tế':code==='TT'?'Bảo hiểm thân thể':(item.FeeName||item.Remark||'Khoản thu');
+    }
+    function noticeFeeKey(item) {
+      return insuranceFeeCode(item) || normalizeText(item.FeeName || item.Remark || 'Khoản thu');
+    }
+    function selectedNoticeFees() {
+      const values=[...document.getElementById('noticeFees').selectedOptions].map(o=>o.value);
+      return !values.length || values.includes('all') ? null : new Set(values);
+    }
+    function refreshNoticeSelectors() {
+      const classEl=document.getElementById('noticeClass'), studentEl=document.getElementById('noticeStudent'), feeEl=document.getElementById('noticeFees');
+      if(!classEl || !studentEl || !feeEl) return;
+      const oldClass=classEl.value || 'all', oldStudent=studentEl.value || 'all', selected=new Set([...feeEl.selectedOptions].map(o=>o.value));
+      const classes=[...new Set(allData.map(x=>String(x.Class||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi',{numeric:true,sensitivity:'base'}));
+      classEl.innerHTML='<option value="all">Tất cả lớp</option>'+classes.map(v=>'<option value="'+escapeHtmlNotice(v)+'">'+escapeHtmlNotice(v)+'</option>').join('');
+      classEl.value=classes.includes(oldClass)?oldClass:'all';
+
+      const scopedItems=allData.filter(x=>classEl.value==='all'||String(x.Class||'').trim()===classEl.value);
+      const students=[...new Map(scopedItems.map(x=>[noticeStudentKey(x),x])).entries()].sort((a,b)=>{
+        const ai=a[1],bi=b[1];return String(ai.Class||'').localeCompare(String(bi.Class||''),'vi',{numeric:true})||studentNameOnly(ai).localeCompare(studentNameOnly(bi),'vi');
+      });
+      studentEl.innerHTML='<option value="all">Tất cả học sinh trong phạm vi</option>'+students.map(([key,item])=>'<option value="'+escapeHtmlNotice(key)+'">'+escapeHtmlNotice((item.Class||'')+' · '+studentNameOnly(item)+' · '+(item.StudentID||''))+'</option>').join('');
+      studentEl.value=students.some(([k])=>k===oldStudent)?oldStudent:'all';
+
+      const selectedStudentKey=studentEl.value||'all';
+      const feeSource=scopedItems.filter(item=>selectedStudentKey==='all'||noticeStudentKey(item)===selectedStudentKey);
+      const feeMap=new Map();
+      feeSource.forEach(item=>{const key=noticeFeeKey(item);if(!feeMap.has(key))feeMap.set(key,item);});
+      feeEl.innerHTML='<option value="all">Tất cả khoản của phạm vi đang chọn</option>'+[...feeMap.entries()].sort((a,b)=>String(a[1].FeeName||'').localeCompare(String(b[1].FeeName||''),'vi')).map(([key,item])=>'<option value="'+escapeHtmlNotice(key)+'">'+escapeHtmlNotice(insuranceFeeName(item))+'</option>').join('');
+      const kept=[...feeEl.options].filter(o=>selected.has(o.value)&&o.value!=='all');
+      if(kept.length)kept.forEach(o=>o.selected=true);else feeEl.options[0].selected=true;
+
+      if(!document.getElementById('noticeDeadline').value){const d=new Date();d.setDate(d.getDate()+10);document.getElementById('noticeDeadline').value=d.toISOString().slice(0,10);}
+      document.getElementById('noticeParentUnit').value=localStorage.getItem('bidvqrgen:notice-parent-unit')||document.getElementById('noticeParentUnit').value;
+      document.getElementById('noticePeriod').value=localStorage.getItem('bidvqrgen:notice-period')||document.getElementById('noticePeriod').value||'';
+      document.getElementById('noticeSigner').value=localStorage.getItem('bidvqrgen:notice-signer')||'';
+      updateNoticeStats();
+    }
+    function noticeFilteredItems() {
+      const cls=document.getElementById('noticeClass').value, student=document.getElementById('noticeStudent').value, fees=selectedNoticeFees();
+      return allData.filter(item=>(cls==='all'||String(item.Class||'').trim()===cls)&&(student==='all'||noticeStudentKey(item)===student)&&(!fees||fees.has(noticeFeeKey(item))));
+    }
+    function noticeGroups() {
+      const map=new Map();
+      noticeFilteredItems().forEach(item=>{
+        const key=noticeStudentKey(item),g=map.get(key)||{key,student:item,items:[]};
+        g.items.push(item);map.set(key,g);
+      });
+      return [...map.values()].map(g=>({...g,total:g.items.reduce((sum,x)=>sum+(Number(String(x.Amount||'').replace(/[^0-9.-]/g,''))||0),0)}));
+    }
+    function updateNoticeStats() {
+      const groups=noticeGroups(),count=groups.reduce((n,g)=>n+g.items.length,0),total=groups.reduce((n,g)=>n+g.total,0);
+      document.getElementById('noticeStudentCount').textContent=groups.length.toLocaleString('vi-VN');
+      document.getElementById('noticeFeeCount').textContent=count.toLocaleString('vi-VN');
+      document.getElementById('noticeGrandTotal').textContent=moneyNotice(total);
+    }
+    function escapeHtmlNotice(value) {
+      return String(value ?? '').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+    function noticeDate(value) {
+      if(!value)return '—';const parts=String(value).split('-');return parts.length===3?parts[2]+'/'+parts[1]+'/'+parts[0]:value;
+    }
+    function sameNoticeAccount(items) {
+      return new Set(items.map(x=>String(x.BankBin||'')+'|'+String(x.AccountNumber||''))).size===1;
+    }
+    // Giữ nguyên thông tin thanh toán do ngân hàng/trường cung cấp cho mỗi món thu.
+    // Không tự tạo QR tổng bằng cách cộng số tiền hoặc sửa Remark.
+    function makeNoticeQrItem(group, items) {
+      if(items.length!==1) throw new Error('Mỗi QR phải ứng với đúng một dòng khoản thu từ file Excel.');
+      const base=items[0];
+      if(!String(base.Remark||'').trim()) throw new Error('Thiếu Remark cho học sinh '+studentNameOnly(base)+'; không thể phát hành QR.');
+      return base;
+    }
+    async function buildNoticeEntries() {
+      let groups=noticeGroups();if(!groups.length)throw new Error('Không có dữ liệu phù hợp để tạo thông báo.');
+      if(document.querySelector('input[name="noticeTemplate"]:checked')?.value==='insurance2'){
+        groups=groups.map(g=>{
+          const yt=g.items.filter(x=>insuranceFeeCode(x)==='YT'),tt=g.items.filter(x=>insuranceFeeCode(x)==='TT');
+          if(yt.length!==1||tt.length!==1)throw new Error('Học sinh '+studentNameOnly(g.student)+' lớp '+(g.student.Class||'')+' cần đúng một khoản YT và một khoản TT. Tìm thấy YT='+yt.length+', TT='+tt.length+'. Hãy kiểm tra mã khoản hoặc bộ lọc.');
+          const items=[yt[0],tt[0]],total=items.reduce((n,x)=>n+(Number(String(x.Amount||'').replace(/[^0-9.-]/g,''))||0),0);
+          return {...g,items,total};
+        });
+      }
+      const deadline=document.getElementById('noticeDeadline').value,collectionPeriod=document.getElementById('noticePeriod').value.trim(),message=document.getElementById('noticeMessage').value.trim();
+      const parentUnit=document.getElementById('noticeParentUnit').value.trim(),signer=document.getElementById('noticeSigner').value.trim(),schoolName=schoolNameInput.value.trim()||'TRƯỜNG HỌC';
+      localStorage.setItem('bidvqrgen:notice-parent-unit',parentUnit);localStorage.setItem('bidvqrgen:notice-period',collectionPeriod);localStorage.setItem('bidvqrgen:notice-signer',signer);
+      const entries=[];
+      let prepared=0;
+      const status=document.getElementById('noticeQrStatus');
+      status.textContent='Đang chuẩn bị QR: 0/'+groups.length+' thông báo';
+      for(const group of groups){
+        const qrItems=group.items.map(item=>makeNoticeQrItem(group,[item]));
+        await Promise.all(qrItems.map(async q=>{q.imageData=await prepareQrImage(q);if(!isValidQrDataUrl(q.imageData) && !(q.qrOriginalFallback && q.imageData===q.url))throw new Error('Không tạo được QR hợp lệ cho '+studentNameOnly(group.student)+' ('+insuranceFeeName(q)+').');}));
+        entries.push({...group,qrItems,deadline,collectionPeriod,message,parentUnit,signer,schoolName});
+        status.textContent='Đang chuẩn bị QR: '+(++prepared)+'/'+groups.length+' thông báo';
+      }
+      return entries;
+    }
+    function noticeQrHtml(qr) {
+      return '<div class="notice-qr-simple"><img src="'+qr.imageData+'" alt="QR thanh toán"><small>'+escapeHtmlNotice(insuranceFeeName(qr))+' · '+moneyNotice(qr.Amount)+'</small></div>';
+    }
+
+    // Mẫu riêng: hai QR độc lập, BHYT bắt buộc và BHTT tự nguyện.
+    function noticeInsurance2A4Html(entry) {
+      const yt=entry.qrItems.find(x=>insuranceFeeCode(x)==='YT');
+      const tt=entry.qrItems.find(x=>insuranceFeeCode(x)==='TT');
+      if(!yt||!tt)throw new Error('Thiếu QR BHYT hoặc BHTT của '+studentNameOnly(entry.student));
+      const row=(item,index,nature)=>'<tr><td>'+index+'</td><td>'+escapeHtmlNotice(insuranceFeeName(item))+'</td><td>'+nature+'</td><td>'+moneyNotice(item.Amount)+'</td></tr>';
+      const card=(item,voluntary)=>`
+        <div class="insurance2-card">
+          <div class="insurance2-card-title">${voluntary?'QR BẢO HIỂM THÂN THỂ':'QR BẢO HIỂM Y TẾ'}</div>
+          <div class="insurance2-tag ${voluntary?'optional':'required'}">${voluntary?'TỰ NGUYỆN':'BẮT BUỘC'}</div>
+          <div class="insurance2-card-amount">${moneyNotice(item.Amount)}</div>
+          <img src="${item.imageData}" alt="QR ${voluntary?'BHTT':'BHYT'}" />
+        </div>`;
+      return `<article class="notice-a4 notice-insurance2">
+        <div class="notice-doc-header">
+          <div class="notice-school-block"><strong>${escapeHtmlNotice(entry.parentUnit||'')}</strong><b>${escapeHtmlNotice(entry.schoolName)}</b></div>
+          <div class="notice-national-block"><strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><b>Độc lập - Tự do - Hạnh phúc</b><span></span></div>
+        </div>
+        <div class="notice-title-block"><h1>THÔNG BÁO KHOẢN THU HỌC SINH</h1>
+          <p>Thông tin bảo hiểm và hướng dẫn thanh toán</p>
+          <div class="notice-title-meta">
+            ${entry.collectionPeriod?'<span><b>Kỳ thu:</b> '+escapeHtmlNotice(entry.collectionPeriod)+'</span>':''}
+            ${entry.deadline?'<span><b>Hạn nộp:</b> '+escapeHtmlNotice(noticeDate(entry.deadline))+'</span>':''}
+          </div>
+        </div>
+        <section class="notice-student-panel">
+          <div class="notice-student-main"><span>HỌ VÀ TÊN HỌC SINH</span><strong>${escapeHtmlNotice(studentNameOnly(entry.student))}</strong></div>
+          <div><span>LỚP</span><strong>${escapeHtmlNotice(entry.student.Class||'—')}</strong></div>
+          <div><span>NGÀY SINH</span><strong>${escapeHtmlNotice(entry.student.BirthDate||'—')}</strong></div>
+        </section>
+        <section class="notice-fee-section">
+          <div class="notice-section-heading"><strong>CHI TIẾT CÁC KHOẢN THU</strong></div>
+          <table><thead><tr><th>STT</th><th>Nội dung khoản thu</th><th>Tính chất</th><th>Số tiền</th></tr></thead>
+          <tbody>${row(yt,1,'Bắt buộc')}${row(tt,2,'Tự nguyện')}</tbody></table>
+          <div class="insurance2-summary">BHYT cần nộp: <b>${moneyNotice(yt.Amount)}</b> <span>·</span> BHTT tự nguyện: <b>${moneyNotice(tt.Amount)}</b></div>
+        </section>
+        <section class="insurance2-qr-section">
+          ${card(yt,false)}
+          ${card(tt,true)}
+        </section>
+        <section class="insurance2-instructions">
+          <h2>HƯỚNG DẪN THANH TOÁN</h2>
+          <ol>
+            <li><b>Bảo hiểm y tế (BHYT):</b> Phụ huynh quét QR bên trái để thanh toán khoản bắt buộc.</li>
+            <li><b>Bảo hiểm thân thể (BHTT):</b> Đây là khoản tự nguyện. Nếu đăng ký tham gia, phụ huynh quét thêm QR bên phải; nếu không tham gia thì không cần quét QR BHTT.</li>
+            <li>Hai QR là hai khoản riêng, không phải hai phương án thanh toán thay thế nhau. Phụ huynh cần nộp khoản nào thì quét đúng QR của khoản đó.</li>
+            <li>Trước khi chuyển tiền, kiểm tra tên người nhận, số tiền và nội dung thanh toán hiển thị trong ứng dụng ngân hàng.</li>
+          </ol>
+          ${entry.deadline?'<p class="insurance2-deadline"><b>Hạn nộp:</b> '+escapeHtmlNotice(noticeDate(entry.deadline))+'</p>':''}
+          <p class="notice-final-message">${escapeHtmlNotice(entry.message||'Nếu phụ huynh đã thanh toán, vui lòng bỏ qua thông báo này.')}</p>
+        </section>
+        <section class="notice-footer-row"><div class="notice-signature-box">
+          <i>Hiếu Giang, ngày ${new Intl.DateTimeFormat('vi-VN').format(new Date())}</i>
+          <strong>HIỆU TRƯỞNG</strong><div class="notice-signature-space"></div><span>${escapeHtmlNotice(entry.signer||'')}</span>
+        </div></section>
+      </article>`;
+    }
+
+    function noticeA4Html(entry) {
+      if(document.querySelector('input[name="noticeTemplate"]:checked')?.value==='insurance2')return noticeInsurance2A4Html(entry);
+      const rows=entry.items.map((item,i)=>'<tr><td>'+(i+1)+'</td><td>'+escapeHtmlNotice(insuranceFeeName(item))+'</td><td>'+moneyNotice(item.Amount)+'</td></tr>').join('');
+      const qrGrid='<div class="notice-qr-grid '+(entry.qrItems.length>1?'multi':'')+'">'+entry.qrItems.map(noticeQrHtml).join('')+'</div>';
+      return `<article class="notice-a4">
+        <div class="notice-doc-header">
+          <div class="notice-school-block">
+            <strong>${escapeHtmlNotice(entry.parentUnit||'')}</strong>
+            <b>${escapeHtmlNotice(entry.schoolName)}</b>
+          </div>
+          <div class="notice-national-block">
+            <strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong>
+            <b>Độc lập - Tự do - Hạnh phúc</b>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="notice-title-block">
+          <h1>THÔNG BÁO KHOẢN THU HỌC SINH</h1>
+          <p>Thông tin khoản phải nộp và hướng dẫn thanh toán</p>
+          <div class="notice-title-meta">
+            ${entry.collectionPeriod?`<span><b>Kỳ thu:</b> ${escapeHtmlNotice(entry.collectionPeriod)}</span>`:'' }
+            ${entry.deadline?`<span><b>Hạn nộp:</b> ${escapeHtmlNotice(noticeDate(entry.deadline))}</span>`:'' }
+          </div>
+        </div>
+
+        <section class="notice-student-panel">
+          <div class="notice-student-main"><span>HỌ VÀ TÊN HỌC SINH</span><strong>${escapeHtmlNotice(studentNameOnly(entry.student))}</strong></div>
+          <div><span>LỚP</span><strong>${escapeHtmlNotice(entry.student.Class||'—')}</strong></div>
+          <div><span>MÃ HỌC SINH</span><strong>${escapeHtmlNotice(entry.student.StudentID||'—')}</strong></div>
+          <div><span>NGÀY SINH</span><strong>${escapeHtmlNotice(entry.student.BirthDate||'—')}</strong></div>
+        </section>
+
+        <section class="notice-fee-section">
+          <div class="notice-section-heading"><strong>CHI TIẾT CÁC KHOẢN THU</strong></div>
+          <table>
+            <thead><tr><th>STT</th><th>Nội dung khoản thu</th><th>Số tiền</th></tr></thead>
+            <tbody>${rows}<tr class="notice-total"><td colspan="2">TỔNG SỐ TIỀN PHẢI NỘP</td><td>${moneyNotice(entry.total)}</td></tr></tbody>
+          </table>
+          <div class="notice-amount-words"><span>Bằng chữ:</span><strong>${escapeHtmlNotice(amountToVietnameseWords(entry.total))}</strong></div>
+        </section>
+
+        <section class="notice-payment-section">
+          <div class="notice-qr-column">
+            <div class="notice-payment-label">QUÉT QR ĐỂ THANH TOÁN</div>
+            ${qrGrid}
+          </div>
+          <div class="notice-guide">
+            <h2>Hướng dẫn thanh toán</h2>
+            <ol>
+              <li>Mở ứng dụng ngân hàng và quét mã QR tương ứng.</li>
+              <li>Kiểm tra đúng tên người nhận và số tiền trước khi xác nhận.</li>
+              <li>QR đã có sẵn số tiền và nội dung thanh toán theo dữ liệu nhà trường.</li>
+            </ol>
+            <div class="notice-deadline-box"><span>Hạn nộp</span><strong>Trước ngày ${escapeHtmlNotice(noticeDate(entry.deadline))}</strong></div>
+            <p class="notice-final-message">${escapeHtmlNotice(entry.message)}</p>
+          </div>
+        </section>
+
+        <section class="notice-footer-row">
+          <div class="notice-signature-box">
+            <i>Hiếu Giang, ngày ${new Intl.DateTimeFormat('vi-VN').format(new Date())}</i>
+            <strong>HIỆU TRƯỞNG</strong>
+            <div class="notice-signature-space"></div>
+            <span>${escapeHtmlNotice(entry.signer||'')}</span>
+          </div>
+        </section>
+      </article>`;
+    }
+    function renderNoticePreview(entries) {
+      const mobile=document.querySelector('input[name="noticeTemplate"]:checked')?.value==='mobile';
+      document.getElementById('noticePreviewSummary').textContent=entries.length+' thông báo · '+entries.reduce((n,x)=>n+x.items.length,0)+' khoản';
+      document.getElementById('noticeQrStatus').textContent=entries.reduce((n,x)=>n+x.qrItems.length,0)+' QR';
+      document.getElementById('noticePreview').innerHTML=entries.slice(0,6).map(entry=>{
+        if(!mobile)return noticeA4Html(entry);
+        const birthDate=entry.student.BirthDate||'—';
+        return '<article class="mobile-notice">'
+          +'<div class="mobile-head"><strong>'+escapeHtmlNotice(entry.schoolName)+'</strong><span>Thông báo khoản thu học sinh</span>'+(entry.collectionPeriod?'<small>Kỳ thu: '+escapeHtmlNotice(entry.collectionPeriod)+'</small>':'')+'</div>'
+          +'<div class="mobile-student"><b>'+escapeHtmlNotice(studentNameOnly(entry.student))+'</b><div>Lớp '+escapeHtmlNotice(entry.student.Class||'—')+' · Mã HS: '+escapeHtmlNotice(entry.student.StudentID||'—')+'</div><div>Ngày sinh: '+escapeHtmlNotice(birthDate)+'</div></div>'
+          +'<div class="mobile-total"><span>TỔNG PHẢI NỘP</span><strong>'+moneyNotice(entry.total)+'</strong><b>Hạn nộp: '+escapeHtmlNotice(noticeDate(entry.deadline))+'</b></div>'
+          +'<div class="mobile-items">'+entry.items.map((x,i)=>'<div><span>'+(i+1)+'. '+escapeHtmlNotice(insuranceFeeName(x))+'</span><strong>'+moneyNotice(x.Amount)+'</strong></div>').join('')+'</div>'
+          +'<div class="mobile-qr-preview">'+entry.qrItems.map(q=>'<div class="notice-qr-simple"><img src="'+q.imageData+'" alt="QR thanh toán '+escapeHtmlNotice(insuranceFeeName(q))+'"></div>').join('')+'</div>'
+          +'<div class="mobile-note">'+escapeHtmlNotice(entry.message)+'</div>'
+          +'</article>';
+      }).join('')+(entries.length>6?'<div class="notice-empty">… và '+(entries.length-6)+' thông báo khác sẽ được xuất.</div>':'');
+    }
+
+    async function previewNotices() {
+      const entries=await buildNoticeEntries();window.noticeEntries=entries;renderNoticePreview(entries);
+    }
+    function noticeExportBaseName(entries) {
+      const classes=[...new Set(entries.map(e=>String(e.student.Class||'').trim()).filter(Boolean))];
+      const fees=[...new Set(entries.flatMap(e=>e.items.map(item=>String(insuranceFeeName(item)).trim())).filter(Boolean))];
+      const classPart=classes.length===1?classes[0]:'Tất cả lớp';
+      const feePart=fees.length===1?fees[0]:'Nhiều khoản';
+      return safePathSegment(classPart+'_'+feePart);
+    }
+    function noticePdfTitle(entries) {
+      return safePathSegment(noticeExportBaseName(entries)+'_Thông báo nộp tiền');
+    }
+
+    async function printNotices() {
+      const entries=await buildNoticeEntries(),root=document.getElementById('noticePrintRoot');
+      root.innerHTML=entries.map(noticeA4Html).join('');
+      const previousTitle=document.title;
+      document.title=noticePdfTitle(entries);
+      document.body.classList.add('printing-notices');
+      const cleanup=()=>{document.body.classList.remove('printing-notices');document.title=previousTitle;};
+      window.addEventListener('afterprint',cleanup,{once:true});
+      setTimeout(()=>window.print(),120);
+    }
+    function canvasTextWrap(ctx,text,x,y,maxWidth,lineHeight,maxLines=4) {
+      const words=String(text||'').split(/\s+/);let line='',lines=[];
+      for(const word of words){const test=line?line+' '+word:word;if(ctx.measureText(test).width>maxWidth&&line){lines.push(line);line=word;}else line=test;}
+      if(line)lines.push(line);lines=lines.slice(0,maxLines);lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight));return y+lines.length*lineHeight;
+    }
+    async function mobileNoticePng(entry) {
+      const W=1080,H=2600,canvas=document.createElement('canvas');
+      canvas.width=W;canvas.height=H;
+      const ctx=canvas.getContext('2d');
+      const dark='#173d3a',teal='#006B68',muted='#687b78',line='#d8e7e3';
+      ctx.fillStyle='#F2F8F6';ctx.fillRect(0,0,W,H);ctx.textBaseline='top';
+
+      // BIDV-themed translucent flower watermark, kept outside QR modules.
+      // Reuse the flower image embedded for BIDV QR branding; never redraw petals.
+      const [bidvFlower]=await loadBrandingImages();
+      function watermark(cx,cy,size,alpha){
+        ctx.save();ctx.globalAlpha=alpha;
+        ctx.drawImage(bidvFlower,cx-size/2,cy-size/2,size,size);
+        ctx.restore();
+      }
+      function studentIcon(cx,cy){
+        ctx.save();ctx.fillStyle='#D9F0E9';ctx.beginPath();ctx.arc(cx,cy,39,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#00716B';ctx.beginPath();ctx.arc(cx,cy-10,11,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.ellipse(cx,cy+16,22,14,0,Math.PI,0);ctx.fill();ctx.restore();
+      }
+      // Header
+      ctx.fillStyle='#dcefeb';ctx.fillRect(0,0,W,190);ctx.fillStyle='#006B68';ctx.fillRect(0,0,W,9);watermark(960,86,175,.13);
+      ctx.fillStyle=dark;ctx.font='700 42px Arial';ctx.fillText(entry.schoolName,65,38);
+      ctx.font='28px Arial';ctx.fillStyle=muted;ctx.fillText('Thông báo khoản thu học sinh',65,96);
+      if(entry.collectionPeriod){ctx.font='23px Arial';ctx.fillStyle=teal;ctx.fillText('Kỳ thu: '+entry.collectionPeriod,65,136);}
+
+      // Student information
+      ctx.fillStyle='#fff';ctx.fillRect(45,215,990,220);studentIcon(105,285);
+      ctx.strokeStyle=line;ctx.strokeRect(45,215,990,220);
+      ctx.fillStyle=dark;ctx.font='700 40px Arial';ctx.fillText(studentNameOnly(entry.student),160,248,825);
+      ctx.font='27px Arial';ctx.fillStyle=muted;
+      ctx.fillText('Lớp '+(entry.student.Class||'—')+'  •  Mã HS: '+(entry.student.StudentID||'—'),160,310,825);
+      ctx.fillText('Ngày sinh: '+(entry.student.BirthDate||'—'),160,352,825);
+
+      // Total
+      ctx.fillStyle='#D8EFEA';ctx.fillRect(45,465,990,205);ctx.fillStyle='#C69B35';ctx.fillRect(45,465,7,205);watermark(945,563,135,.09);
+      ctx.fillStyle=dark;ctx.font='700 32px Arial';ctx.fillText('TỔNG PHẢI NỘP',90,505);
+      ctx.fillStyle=teal;ctx.font='600 45px Arial';ctx.fillText(moneyNotice(entry.total),90,564);
+      ctx.fillStyle='#b6403a';ctx.font='700 28px Arial';ctx.textAlign='right';ctx.fillText('Hạn nộp: '+noticeDate(entry.deadline),990,555);ctx.textAlign='left';
+
+      // Fee detail
+      let y=725;ctx.fillStyle=dark;ctx.font='700 31px Arial';ctx.fillText('Chi tiết khoản thu',65,y);y+=55;ctx.font='26px Arial';
+      entry.items.slice(0,6).forEach((item,i)=>{
+        ctx.fillStyle=dark;ctx.fillText((i+1)+'. '+insuranceFeeName(item),75,y,700);
+        ctx.textAlign='right';ctx.font='700 26px Arial';ctx.fillText(moneyNotice(item.Amount),1000,y);
+        ctx.textAlign='left';ctx.font='26px Arial';y+=52;
+      });
+
+      // QR: substantially larger for one QR, balanced for multiple QR codes.
+      y+=24;
+      const qrCount=Math.min(entry.qrItems.length,4),cols=qrCount===1?1:2;
+      const cellW=qrCount===1?700:430;
+      const targetW=qrCount===1?560:340;
+      const startX=qrCount===1?(W-cellW)/2:80;
+      let qrBottom=y;
+      for(let i=0;i<qrCount;i++){
+        const q=entry.qrItems[i],col=i%cols,row=Math.floor(i/cols);
+        const x=startX+col*(qrCount===1?0:470),qy=y+row*(targetW+105);
+        const img=await loadImage(q.imageData);
+        const ratio=Math.min(targetW/img.naturalWidth,targetW/img.naturalHeight);
+        const dw=img.naturalWidth*ratio,dh=img.naturalHeight*ratio;
+        ctx.drawImage(img,x+(cellW-dw)/2,qy,dw,dh);
+        qrBottom=Math.max(qrBottom,qy+dh);
+        ctx.fillStyle=teal;ctx.font='600 21px Arial';ctx.textAlign='center';
+        // Ảnh QR đã chứa thông tin người nộp/số tiền: không in lặp chú thích.
+        ctx.fillText('',x+cellW/2,qy+dh+10);
+        ctx.textAlign='left';
+      }
+
+      const qrRows=Math.ceil(qrCount/cols);
+      const footerY=Math.ceil(qrBottom+28);
+      ctx.fillStyle='#E5F1F1';ctx.fillRect(45,footerY,990,100);
+      ctx.fillStyle='#155D68';ctx.font='24px Arial';canvasTextWrap(ctx,entry.message,80,footerY+25,920,30,2);
+
+      // Crop to real content and draw a rounded BIDV gold border, without
+      // changing QR pixels or stretching its aspect ratio.
+      const finalH=Math.min(H,Math.ceil(footerY+100+43));
+      const out=document.createElement('canvas');out.width=W;out.height=finalH;
+      const oc=out.getContext('2d');
+      oc.fillStyle='#F2F8F6';oc.fillRect(0,0,W,finalH);
+      oc.save();
+      oc.beginPath();
+      oc.roundRect(12,12,W-24,finalH-24,28);oc.clip();
+      oc.drawImage(canvas,0,0,W,finalH,0,0,W,finalH);
+      oc.restore();
+      oc.strokeStyle='#BA9027';oc.lineWidth=6;
+      oc.beginPath();oc.roundRect(12,12,W-24,finalH-24,28);oc.stroke();
+      oc.strokeStyle='#E6CD82';oc.lineWidth=2;
+      oc.beginPath();oc.roundRect(21,21,W-42,finalH-42,22);oc.stroke();
+      const png=out.toDataURL('image/png');
+      if(!isValidQrDataUrl(png))throw new Error('Trình duyệt không xuất được ảnh thông báo PNG. Vui lòng kiểm tra thiết lập quyền riêng tư canvas.');
+      return png;
+    }
+
+    async function a4NoticeImage(entry) {
+      if(typeof html2canvas!=='function')throw new Error('Không tải được thư viện xuất ảnh A4. Kiểm tra kết nối mạng và tải lại trang.');
+      const stage=document.createElement('div');
+      stage.className='notice-image-stage';
+      stage.innerHTML=noticeA4Html(entry);
+      document.body.appendChild(stage);
+      try {
+        await Promise.all([...stage.querySelectorAll('img')].map(img=>img.decode()));
+        await document.fonts.ready;
+        const node=stage.querySelector('.notice-a4');
+        const canvas=await html2canvas(node,{backgroundColor:'#ffffff',scale:1.5,useCORS:true,logging:false,scrollX:0,scrollY:0,windowWidth:1100});
+        if(!canvas.width||!canvas.height)throw new Error('Không thể tạo ảnh thông báo.');
+        const jpeg=canvas.toDataURL('image/jpeg',0.88);
+        if(!/^data:image\/jpeg;base64,/.test(jpeg))throw new Error('Ảnh JPG xuất ra không hợp lệ.');
+        return jpeg;
+      } finally {stage.remove();}
+    }
+    async function downloadNoticeImages() {
+      const entries=await buildNoticeEntries(),zip=new JSZip();
+      const mode=document.querySelector('input[name="noticeTemplate"]:checked')?.value;
+      let done=0;
+      document.getElementById('noticeQrStatus').textContent='Đang tạo ảnh…';
+      for(const entry of entries){
+        const isA4=mode==='insurance2'||mode==='a4';
+        const data=isA4?await a4NoticeImage(entry):await mobileNoticePng(entry);
+        const ext=isA4?'.jpg':'.png';
+        const folder=zip.folder(safePathSegment(entry.student.Class||'Khong lop'));
+        const filename=safePathSegment(entry.student.Class||'Lop')+'_'+safePathSegment(studentNameOnly(entry.student))+'_'+safePathSegment(entry.student.StudentID||'HS')+ext;
+        folder.file(filename,dataURLToBlob(data));
+        done++;
+        document.getElementById('noticeQrStatus').textContent=done+'/'+entries.length+' ảnh';
+      }
+      document.getElementById('noticeQrStatus').textContent='Đang đóng ZIP ('+done+' ảnh)…';
+      const blob=await zip.generateAsync({type:'blob',compression:'STORE'});
+      saveAs(blob,safePathSegment(noticeExportBaseName(entries)+'_Anh_thong_bao')+'.zip');
+      document.getElementById('noticeQrStatus').textContent=entries.length+' ảnh đã xuất';
+    }
+    function setMode(mode) {
+      history.replaceState(null,'',location.pathname+location.search+(mode==='insurance'?'#lua-chon':''));
+      const notice=mode==='notice',insurance=mode==='insurance';document.getElementById('insuranceTool').hidden=!insurance;document.getElementById('noticeTool').hidden=!notice;document.getElementById('qrs').hidden=notice||insurance;document.getElementById('insuranceModeTab').classList.toggle('active',insurance);
+      document.getElementById('qrModeTab').classList.toggle('active',!notice&&!insurance);document.getElementById('noticeModeTab').classList.toggle('active',notice);
+      document.getElementById('search').style.display=(notice||insurance)?'none':'';document.getElementById('classExport').style.display=(notice||insurance)?'none':(document.getElementById('classSelect').options.length>1?'flex':'none');
+      document.getElementById('downloadAll').style.display=(notice||insurance)?'none':(allData.length?'inline-block':'none');
+      document.getElementById('modeHelp').textContent=notice?'Chọn lớp, học sinh, khoản thu và hạn nộp; web dùng trực tiếp tài khoản trong file Excel để tạo thông báo.':'Tải file Excel một lần để tạo QR theo từng dòng hoặc xuất thông báo khoản thu hàng loạt.';
+      if(notice)refreshNoticeSelectors();if(insurance)document.getElementById('modeHelp').textContent='Nạp file có nhiều lựa chọn định danh cho mỗi học sinh. Mỗi QR dùng tài khoản và số tiền của chính dòng nguồn.';
+    }
+
+    function safePathSegment(value) {
+      return String(value || '')
+        .normalize('NFC')
+        .replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/[. ]+$/g, '')
+        .trim()
+        .slice(0, 100) || 'Khong ro';
+    }
+
+    function studentNameOnly(item) {
+      const explicitName = String(item.StudentName || '').trim();
+      if (explicitName) return explicitName.normalize('NFC');
+      const fullName = String(item.DisplayName || item.AccountName || '').trim();
+      const className = String(item.Class || '').trim();
+      if (className && fullName.slice(-className.length).toLocaleUpperCase() === className.toLocaleUpperCase()) {
+        return fullName.slice(0, -className.length).replace(/[\s_-]+$/g, '').trim().normalize('NFC');
+      }
+      return fullName.normalize('NFC');
+    }
+    function assignExportFilenames(items) {
+      const used = new Map();
+      items.forEach((item, index) => {
+        const classPart = safePathSegment(item.Class || 'Khong lop');
+        const namePart = safePathSegment(studentNameOnly(item) || 'Khong ten');
+        const idPart = safePathSegment(item.StudentID || `STT${index + 1}`);
+        const base = `${classPart}_${namePart}_${idPart}`;
+        const count = (used.get(base) || 0) + 1;
+        used.set(base, count);
+        item.filename = `${base}${count > 1 ? `_QR${count}` : ''}.png`;
+      });
+    }
+
+    function updateClassExportOptions(items) {
+      const group = document.getElementById('classExport');
+      const select = document.getElementById('classSelect');
+      const classes = [...new Set(items.map(item => String(item.Class || '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'vi', {numeric:true, sensitivity:'base'}));
+      select.innerHTML = '<option value="">Chọn lớp để xuất QR</option>';
+      classes.forEach(className => {
+        const option = document.createElement('option');
+        option.value = className;
+        option.textContent = className;
+        select.appendChild(option);
+      });
+      group.style.display = classes.length ? 'flex' : 'none';
+      select.disabled = classes.length === 0;
+      updateClassExportButton();
+    }
+
+    function updateClassExportButton() {
+      const select = document.getElementById('classSelect');
+      const button = document.getElementById('downloadClass');
+      const className = select.value;
+      const count = allData.filter(item => String(item.Class || '').trim() === className).length;
+      button.disabled = !className || count === 0;
+      button.textContent = className && count
+        ? `⬇ Xuất QR lớp ${className} (${count} ảnh)`
+        : '⬇ Xuất QR theo lớp';
+    }
+
+    async function downloadSelectedClass() {
+      const className = document.getElementById('classSelect').value;
+      if (!className) return;
+      const items = allData.filter(item => String(item.Class || '').trim() === className);
+      await downloadItemsAsZip(items, `QR_Lop_${safePathSegment(className)}.zip`);
+    }
+
+    async function downloadAll() {
+      await downloadItemsAsZip(allData, 'QR_Tat_ca_cac_lop.zip');
+    }
+
+    async function downloadItemsAsZip(items, zipName) {
+      if (!items.length) {
+        alert('Không có ảnh QR để đưa vào tệp ZIP.');
+        return;
+      }
+      const zip = new JSZip();
+      const failures = [];
+      let added = 0;
+      const status=document.getElementById('qrExportStatus');
+      status.textContent='Bắt đầu xuất '+items.length+' QR. Có thể tải theo lớp để nhận tệp nhỏ nhanh hơn.';
+      const buttons=[document.getElementById('downloadAll'),document.getElementById('downloadClass')];
+      buttons.forEach(b=>b.disabled=true);
+      try {
+      for (const qr of items) {
+        try {
+          const dataUrl = await prepareQrImage(qr,null,false);
+          const folder = zip.folder(safePathSegment(qr.Class || 'Khong lop'));
+          let blob;
+          if(isValidQrDataUrl(dataUrl)) blob=dataURLToBlob(dataUrl);
+          else throw new Error('Ảnh QR ghép logo không hợp lệ; dừng ZIP, không thay bằng QR gốc.');
+          folder.file(qr.filename, blob);
+          // ZIP đã giữ Blob; không lưu hàng trăm data URL lớn trong RAM.
+          qr.imageData=null;
+          qr.imagePromise=null;
+          added++;
+          if(added%5===0 || added===items.length) {
+            status.textContent='Đang tạo QR: '+added+'/'+items.length+' ('+Math.round(added/items.length*100)+'%). Không đóng tab.';
+            await new Promise(resolve=>setTimeout(resolve,0));
+          }
+        } catch (err) {
+          const reason = err && err.message ? err.message : String(err);
+          failures.push(qr.filename + ': ' + reason);
+          console.error('Lỗi tạo ảnh QR:', qr.filename, err);
+        }
+      }
+      if (failures.length) {
+        status.textContent='Xuất thất bại: '+failures.length+' QR. Không xuất ZIP thiếu dữ liệu.';
+        const firstFailure = failures[0];
+        alert('Dừng xuất ZIP để tránh tạo tệp thiếu ảnh. Tạo được ' + added + '/' + items.length +
+          ' ảnh. Lỗi đầu tiên: ' + firstFailure);
+        return;
+      }
+      if (!added) {
+        status.textContent='Không tạo được QR nào.';
+        alert('Không tạo được ảnh QR nên ZIP không được xuất.');
+        return;
+      }
+      const content = await zip.generateAsync({type: 'blob', compression: 'STORE'});
+      saveAs(content, zipName);
+      status.textContent='Hoàn tất '+added+'/'+items.length+' QR: '+zipName;
+      } finally { buttons.forEach(b=>b.disabled=false); }
+    }
+
+    // Local images only, for logos and generated QR image data.
+    function loadImage(url) {
+      if (typeof url !== 'string' || (!url.startsWith('data:image/') && !url.startsWith('blob:')))
+        return Promise.reject(new Error('Chỉ nhận ảnh cục bộ.'));
+      return new Promise((resolve,reject)=>{
+        const image=new Image();image.onload=()=>resolve(image);
+        image.onerror=()=>reject(Error('Không đọc được ảnh cục bộ'));
+        image.src=url;
+      });
+    }
+    function isValidQrDataUrl(value) { return typeof value==='string' && value.startsWith('data:image/png;base64,') && value.length>100; }
+    function dataURLToBlob(dataUrl) {
+      if(typeof dataUrl!=='string'||!/^data:image\/(png|jpeg);base64,/.test(dataUrl))throw new Error('Dữ liệu ảnh PNG/JPG không hợp lệ.');
+      const parts = dataUrl.split(",");
+      const mime = dataUrl.startsWith('data:image/jpeg;')?'image/jpeg':'image/png';
+      const bstr = atob(parts[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
+      return new Blob([u8arr], { type: mime });
+    }
+  </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="../vendor/qrcode.min.js"></script>
+<script src="../choice-engine.js?v=20261006-compact-notice"></script>
+<script src="../insurance.js?v=20261006-compact-notice"></script>
+<script src="../bidv-qr-core.js?v=1.0.0"></script>
+<script src="../bidv-qr-renderer.js?v=1.0.0"></script>
+<script src="../portal-qr-export.js?v=20261108-engine2"></script>
+</body>
+</html>
