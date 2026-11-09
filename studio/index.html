@@ -276,8 +276,7 @@
       <button class="mode-tab" id="insuranceModeTab" type="button">▦ Thông báo lựa chọn QR</button>
     </div>
     <div class="mode-help" id="modeHelp">Tải file Excel một lần, sau đó thao tác Thông báo nộp tiền ở phía trên; danh sách QR chi tiết hiển thị phía dưới.</div>
-    <section class="portal-qr-export" style="margin:12px 0;padding:16px;background:#eaf6f2;border:1px solid #b7d4cb;border-radius:10px"><strong>Kết nối cổng phụ huynh (Trưng Vương – thử nghiệm)</strong><p>Xuất danh mục QR đã tạo từ file Excel, giữ nguyên tài khoản định danh và nội dung thanh toán. Dữ liệu chỉ tải xuống máy, chưa gửi lên internet, chưa phải QR được xác minh.</p><button type="button" id="portalQrManifestExport" disabled>Xuất danh mục QR để xác minh trên cổng phụ huynh</button>
-<button type="button" id="portalQrConnect" disabled>Kết nối trực tiếp cổng phụ huynh (DEMO)</button><p id="portalQrExportStatus" role="status">Chưa tải dữ liệu QR.</p></section>
+
     <div id="controls">
       <input type="file" id="upload" accept=".xlsx,.xls" />
       <label>Tên trường <input id="schoolName" type="text" placeholder="Nhập tên trường để lưu logo riêng" /></label>
@@ -1521,6 +1520,6 @@
 <script src="../insurance.js?v=20261006-compact-notice"></script>
 <script src="../bidv-qr-core.js?v=1.0.0"></script>
 <script src="../bidv-qr-renderer.js?v=1.0.0"></script>
-<script src="../portal-qr-export.js?v=20261108-engine2"></script>
+
 </body>
 </html>
