@@ -287,7 +287,7 @@
         </select>
         <button id="downloadClass" type="button" disabled>⬇ Xuất QR theo lớp</button>
       </div>
-      <button id="downloadAll" style="display:none;">⬇ Tải tất cả QR (ZIP)</button>
+      <button id="downloadAll" style="display:none;" title="Xuất toàn bộ ảnh QR vào một tệp ZIP, tự chia thư mục theo từng lớp">⬇ Xuất tất cả ảnh – ZIP theo thư mục lớp</button>
     </div>
 
     <section id="noticeTool" class="notice-tool" hidden>
@@ -1436,7 +1436,7 @@
     }
 
     async function downloadAll() {
-      await downloadItemsAsZip(allData, 'QR_Tat_ca_cac_lop.zip');
+      await downloadItemsAsZip(allData, 'QR_Anh_theo_tung_lop.zip');
     }
 
     async function downloadItemsAsZip(items, zipName) {
@@ -1448,7 +1448,8 @@
       const failures = [];
       let added = 0;
       const status=document.getElementById('qrExportStatus');
-      status.textContent='Bắt đầu xuất '+items.length+' QR. Có thể tải theo lớp để nhận tệp nhỏ nhanh hơn.';
+      const classCount = new Set(items.map(qr => safePathSegment(qr.Class || 'Khong lop'))).size;
+      status.textContent='Đang chuẩn bị '+items.length+' ảnh QR, chia vào '+classCount+' thư mục lớp trong một tệp ZIP. Không đóng tab khi đang xuất.';
       const buttons=[document.getElementById('downloadAll'),document.getElementById('downloadClass')];
       buttons.forEach(b=>b.disabled=true);
       try {
@@ -1488,7 +1489,7 @@
       }
       const content = await zip.generateAsync({type: 'blob', compression: 'STORE'});
       saveAs(content, zipName);
-      status.textContent='Hoàn tất '+added+'/'+items.length+' QR: '+zipName;
+      status.textContent='Đã xuất '+added+' ảnh QR vào '+classCount+' thư mục lớp: '+zipName;
       } finally { buttons.forEach(b=>b.disabled=false); }
     }
 
